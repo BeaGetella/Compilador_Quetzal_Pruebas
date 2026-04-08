@@ -1,0 +1,20 @@
+entero a = 10
+entero b = 3
+
+si (a > b) {
+    consola.mostrar("a es mayor que b")
+}
+
+si (a == b) {
+    consola.mostrar("son iguales")
+} sino {
+    consola.mostrar("no son iguales")
+}
+
+si (a > 20) {
+    consola.mostrar("mayor a 20")
+} sino si (a > 5) {
+    consola.mostrar("mayor a 5")
+} sino {
+    consola.mostrar("menor o igual a 5")
+}

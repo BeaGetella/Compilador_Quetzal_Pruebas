@@ -30,6 +30,79 @@ public class VisualizadorAST {
         } else if (nodo instanceof LlamadaFuncion) {
             imprimirLlamadaFuncion((LlamadaFuncion) nodo, prefijo, marcador, nuevoPrefijo);
         }
+     else if (nodo instanceof NodoSi) {
+        imprimirNodoSi((NodoSi) nodo, prefijo, marcador, nuevoPrefijo);
+        } else if (nodo instanceof Asignacion) {
+            Asignacion a = (Asignacion) nodo;
+            System.out.println(prefijo + marcador + "Asignacion (" + a.getNombre() + " " + a.getOperador() + ")");
+            if (a.getValor() != null) {
+                imprimirExpresion(a.getValor(), prefijo + nuevoPrefijo, true);
+            }
+        } else if (nodo instanceof OperacionUnaria) {
+            OperacionUnaria op = (OperacionUnaria) nodo;
+            String pos = op.esPostfijo() ? "(postfijo)" : "(prefijo)";
+            System.out.println(prefijo + marcador + "OperacionUnaria " + pos + " (" + op.getOperador() + ")");
+            imprimirExpresion(op.getOperando(), prefijo + nuevoPrefijo, true);
+        } else if (nodo instanceof NodoMientras) {
+            imprimirNodoMientras((NodoMientras) nodo, prefijo, marcador, nuevoPrefijo);
+        } else if (nodo instanceof NodoRomper) {
+            System.out.println(prefijo + marcador + "NodoRomper");
+        } else if (nodo instanceof NodoContinuar) {
+            System.out.println(prefijo + marcador + "NodoContinuar");
+        }
+
+    }
+
+    private static void imprimirNodoMientras(NodoMientras nodo, String prefijo, String marcador, String nuevoPrefijo) {
+        System.out.println(prefijo + marcador + "NodoMientras");
+
+        // Condición
+        System.out.println(prefijo + nuevoPrefijo + RAMA + "Condicion:");
+        imprimirExpresion(nodo.getCondicion(), prefijo + nuevoPrefijo + VERTICAL, true);
+
+        // Cuerpo
+        System.out.println(prefijo + nuevoPrefijo + ULTIMA_RAMA + "Cuerpo:");
+        List<Nodo> cuerpo = nodo.getCuerpo();
+        for (int i = 0; i < cuerpo.size(); i++) {
+            boolean esUltimo = (i == cuerpo.size() - 1);
+            imprimirNodo(cuerpo.get(i), prefijo + nuevoPrefijo + ESPACIO, esUltimo);
+        }
+    }
+
+    private static void imprimirNodoSi(NodoSi nodo, String prefijo, String marcador, String nuevoPrefijo) {
+        System.out.println(prefijo + marcador + "NodoSi");
+
+        // Condición
+        System.out.println(prefijo + nuevoPrefijo + RAMA + "Condicion:");
+        imprimirExpresion(nodo.getCondicion(), prefijo + nuevoPrefijo + VERTICAL, true);
+
+        // Cuerpo si
+        System.out.println(prefijo + nuevoPrefijo + RAMA + "CuerpoSi:");
+        List<Nodo> cuerpoSi = nodo.getCuerpoSi();
+        for (int i = 0; i < cuerpoSi.size(); i++) {
+            boolean esUltimo = (i == cuerpoSi.size() - 1);
+            imprimirNodo(cuerpoSi.get(i), prefijo + nuevoPrefijo + VERTICAL, esUltimo);
+        }
+
+        // Sino si encadenados
+        for (int i = 0; i < nodo.getCondicionesSinoSi().size(); i++) {
+            System.out.println(prefijo + nuevoPrefijo + RAMA + "SinoSi[" + i + "] Condicion:");
+            imprimirExpresion(nodo.getCondicionesSinoSi().get(i), prefijo + nuevoPrefijo + VERTICAL, true);
+            System.out.println(prefijo + nuevoPrefijo + RAMA + "SinoSi[" + i + "] Cuerpo:");
+            List<Nodo> cuerpo = nodo.getCuerposSinoSi().get(i);
+            for (int j = 0; j < cuerpo.size(); j++) {
+                imprimirNodo(cuerpo.get(j), prefijo + nuevoPrefijo + VERTICAL, j == cuerpo.size() - 1);
+            }
+        }
+
+        // Sino final
+        if (nodo.tieneSino()) {
+            System.out.println(prefijo + nuevoPrefijo + ULTIMA_RAMA + "Sino:");
+            List<Nodo> cuerpoSino = nodo.getCuerpoSino();
+            for (int i = 0; i < cuerpoSino.size(); i++) {
+                imprimirNodo(cuerpoSino.get(i), prefijo + nuevoPrefijo + ESPACIO, i == cuerpoSino.size() - 1);
+            }
+        }
     }
 
     private static void imprimirDeclaracionVariable(DeclaracionVariable decl, String prefijo, String marcador, String nuevoPrefijo) {
@@ -93,6 +166,27 @@ public class VisualizadorAST {
                 boolean esUltimoArg = (i == argumentos.size() - 1);
                 imprimirExpresion(argumentos.get(i), prefijo + nuevoPrefijo, esUltimoArg);
             }
+
+        } else if (expr instanceof OperacionUnaria) {
+            OperacionUnaria op = (OperacionUnaria) expr;
+            String pos = op.esPostfijo() ? "(postfijo)" : "(prefijo)";
+            System.out.println(prefijo + marcador + "OperacionUnaria " + pos + " (" + op.getOperador() + ")");
+            imprimirExpresion(op.getOperando(), prefijo + nuevoPrefijo, true);
+
+        } else if (expr instanceof OperacionTernaria) {
+            OperacionTernaria op = (OperacionTernaria) expr;
+            System.out.println(prefijo + marcador + "OperacionTernaria (? :)");
+            imprimirExpresion(op.getCondicion(),    prefijo + nuevoPrefijo, false);
+            imprimirExpresion(op.getSiVerdadero(),  prefijo + nuevoPrefijo, false);
+            imprimirExpresion(op.getSiFalso(),      prefijo + nuevoPrefijo, true);
+
+        } else if (expr instanceof Asignacion) {
+            Asignacion a = (Asignacion) expr;
+            System.out.println(prefijo + marcador + "Asignacion (" + a.getNombre() + " " + a.getOperador() + ")");
+            if (a.getValor() != null) {
+                imprimirExpresion(a.getValor(), prefijo + nuevoPrefijo, true);
+            }
         }
+
     }
 }

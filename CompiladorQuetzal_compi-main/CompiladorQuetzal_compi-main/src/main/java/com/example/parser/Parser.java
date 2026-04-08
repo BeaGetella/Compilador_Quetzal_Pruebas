@@ -82,14 +82,26 @@ public class Parser {
             return parsearLlamadaConsola();
         }
 
+        if (verificar(TipoToken.SI)) {
+            return parsearSi();
+        }
+
+        if (verificar(TipoToken.MIENTRAS)) {
+            return parsearMientras();
+        }
+        if (verificar(TipoToken.ROMPER)) {
+            return parsearRomper();
+        }
+
+        if (verificar(TipoToken.CONTINUAR)) {
+            return parsearContinuar();
+        }
+
         // Palabras reservadas reconocidas pero aún sin implementación
-        if (verificar(TipoToken.SI)          ||
-                verificar(TipoToken.SINO)        ||
+        if (
+//                verificar(TipoToken.SINO)        ||
                 verificar(TipoToken.PARA)        ||
-                verificar(TipoToken.MIENTRAS)    ||
                 verificar(TipoToken.HACER)       ||
-                verificar(TipoToken.ROMPER)      ||
-                verificar(TipoToken.CONTINUAR)   ||
                 verificar(TipoToken.RETORNAR)    ||
                 verificar(TipoToken.OBJETO)      ||
                 verificar(TipoToken.NUEVO)       ||
@@ -109,6 +121,8 @@ public class Parser {
         if (verificar(TipoToken.IDENTIFICADOR)) {
             return parsearExpresion();
         }
+
+
 
         throw new RuntimeException("Instrucción no reconocida: '" +
                 tokenActual.getValor() + "' en línea " + tokenActual.getLinea());
@@ -136,6 +150,13 @@ public class Parser {
         }
 
         String tipo = tipoToken.getValor();
+
+        // Consumir 'var' opcional (indica variable mutable)
+        boolean esMutable = false;
+        if (verificar(TipoToken.VAR)) {
+            esMutable = true;
+            avanzar();
+        }
 
         // Consumir el nombre de la variable
         Token nombreToken = consumir(TipoToken.IDENTIFICADOR, "Se esperaba un nombre de variable");
@@ -305,21 +326,20 @@ public class Parser {
 
     private Expresion parsearOr() {
         Expresion izquierda = parsearAnd();
-
-        while (verificar(TipoToken.O) || verificar(TipoToken.O)) {
+//        while (verificar(TipoToken.O) || verificar(TipoToken.OR)) {  // O = "o", OR = "||"
+        while (verificar(TipoToken.O)) {
             String operador = tokenActual.getValor();
             avanzar();
             Expresion derecha = parsearAnd();
             izquierda = new OperacionBinaria(operador, izquierda, derecha);
         }
-
         return izquierda;
     }
 
     private Expresion parsearAnd() {
         Expresion izquierda = parsearIgualdad();
 
-        while (verificar(TipoToken.Y) || verificar(TipoToken.Y)) {
+        while (verificar(TipoToken.Y)) {
             String operador = tokenActual.getValor();
             avanzar();
             Expresion derecha = parsearIgualdad();
@@ -554,5 +574,81 @@ public class Parser {
 
         // Parsear como expresión (soporta a + b, a * 2, etc.)
         return parserTemp.parsearExpresion();
+    }
+
+    private List<Nodo> parsearBloque() {
+        consumir(TipoToken.LLAVE_IZQ, "Se esperaba '{'");
+        saltarNuevasLineas();
+
+        List<Nodo> instrucciones = new ArrayList<>();
+
+        while (!verificar(TipoToken.LLAVE_DER) && !verificar(TipoToken.EOF)) {
+            instrucciones.add(parsearInstruccion());
+            saltarNuevasLineas();
+        }
+
+        consumir(TipoToken.LLAVE_DER, "Se esperaba '}'");
+        return instrucciones;
+    }
+
+    private NodoSi parsearSi() {
+        consumir(TipoToken.SI, "Se esperaba 'si'");
+        consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+        Expresion condicion = parsearExpresion();
+        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+        saltarNuevasLineas();
+
+        List<Nodo> cuerpoSi = parsearBloque();
+
+        List<Expresion> condicionesSinoSi = new ArrayList<>();
+        List<List<Nodo>> cuerposSinoSi = new ArrayList<>();
+        List<Nodo> cuerpoSino = null;
+
+        saltarNuevasLineas();
+
+        // Mientras haya sino si o sino
+        while (verificar(TipoToken.SINO)) {
+            consumir(TipoToken.SINO, "Se esperaba 'sino'");
+            saltarNuevasLineas();
+
+            if (verificar(TipoToken.SI)) {
+                // sino si (condicion) { }
+                consumir(TipoToken.SI, "Se esperaba 'si'");
+                consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+                Expresion condSinoSi = parsearExpresion();
+                consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                saltarNuevasLineas();
+                condicionesSinoSi.add(condSinoSi);
+                cuerposSinoSi.add(parsearBloque());
+                saltarNuevasLineas();
+            } else {
+                // sino { } — bloque final
+                cuerpoSino = parsearBloque();
+                break;
+            }
+        }
+
+        return new NodoSi(condicion, cuerpoSi, condicionesSinoSi, cuerposSinoSi, cuerpoSino);
+    }
+
+    private NodoMientras parsearMientras() {
+        consumir(TipoToken.MIENTRAS, "Se esperaba 'mientras'");
+        consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+        Expresion condicion = parsearExpresion();
+        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+        saltarNuevasLineas();
+
+        List<Nodo> cuerpo = parsearBloque();
+
+        return new NodoMientras(condicion, cuerpo);
+    }
+    private NodoRomper parsearRomper() {
+        consumir(TipoToken.ROMPER, "Se esperaba 'romper'");
+        return new NodoRomper();
+    }
+
+    private NodoContinuar parsearContinuar() {
+        consumir(TipoToken.CONTINUAR, "Se esperaba 'continuar'");
+        return new NodoContinuar();
     }
 }

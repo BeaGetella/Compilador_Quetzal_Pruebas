@@ -1,0 +1,17 @@
+entero var contador = 0
+mientras (contador < 5) {
+    consola.mostrar(t"contador: {contador}")
+    contador++
+}
+
+entero var i = 0
+mientras (i < 10) {
+    i++
+    si (i == 3) {
+        continuar
+    }
+    si (i == 7) {
+        romper
+    }
+    consola.mostrar(t"i: {i}")
+}
