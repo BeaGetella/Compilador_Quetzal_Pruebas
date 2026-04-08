@@ -1,51 +1,111 @@
 package com.example.lexer;
 
 public enum TipoToken {
-    // Palabras reservadas
-    TIPO_NUMERO,
-    TIPO_TEXTO,
-    TIPO_ENTERO,
-    CONSOLA,
+    // ===== TIPOS DE DATOS =====
+    TIPO_VACIO,      // vacio
+    TIPO_ENTERO,     // entero
+    TIPO_NUMERO,     // numero
+    TIPO_TEXTO,      // texto
+    TIPO_LOG,        // log
+    TIPO_LISTA,      // lista
+    TIPO_JSN,        // jsn
 
-    // Identificadores y literales
+    // ===== MODIFICADORES =====
+    VAR,             // var
+    PUBLICO,         // publico
+    PRIVADO,         // privado
+    LIBRE,           // libre
+    AMBIENTE,        // ambiente
+
+    // ===== CONTROL DE FLUJO =====
+    SI,              // si
+    SINO,            // sino
+    PARA,            // para
+    MIENTRAS,        // mientras
+    HACER,           // hacer
+    ROMPER,          // romper
+    CONTINUAR,       // continuar
+    EN,              // en
+    CADA,            // cada
+    RETORNAR,        // retornar
+
+    // ===== OBJETOS =====
+    OBJETO,          // objeto
+    NUEVO,           // nuevo
+    CONSTRUCTOR,     // constructor
+
+    // ===== ASINCRONIA (RESERVADO) =====
+    ASINCRONO,       // asincrono
+    ESPERAR,         // esperar
+
+    // ===== EXCEPCIONES =====
+    INTENTAR,        // intentar
+    CAPTURAR,        // capturar
+    FINALMENTE,      // finalmente
+    LANZAR,          // lanzar
+    EXCEPCION,       // excepcion
+
+    // ===== MODULOS =====
+    IMPORTAR,        // importar
+    EXPORTAR,        // exportar
+    DESDE,           // desde
+    COMO,            // como
+
+    // ===== LITERALES LOGICOS =====
+    VERDADERO,       // verdadero
+    FALSO,           // falso
+    NULO,            // nulo
+    Y,               // y
+    O,               // o
+    NO,              // no
+
+    // ===== OTROS PROTEGIDOS =====
+    MUT,             // mut
+    DE,              // de
+    ES,              // es
+
+    // ===== YA EXISTENTES =====
+    CONSOLA,
     IDENTIFICADOR,
     LITERAL_NUMERO,
     LITERAL_STRING,
     STRING_INTERPOLADO,
-
-    // Operadores aritméticos
     IGUAL,
     MAS,
     MENOS,
     MULTIPLICACION,
     DIVISION,
-
-    // Símbolos
     PARENTESIS_IZQ,
     PARENTESIS_DER,
     PUNTO,
     DOS_PUNTOS,
-
-    // Palabras reservadas para condicionales
-    SI,
-    SINO,
-
-    // Operadores de comparación
-    MAYOR,
-    MENOR,
-    MAYOR_IGUAL,
-    MENOR_IGUAL,
-    IGUAL_IGUAL,
-    DIFERENTE,
-
-    // Llaves
-    LLAVE_IZQ,
-    LLAVE_DER,
-
-    // Operador ternario
-    INTERROGACION,
-
-    // Especiales
+    LLAVE_IZQ,       // { (AGREGAR)
+    LLAVE_DER,       // } (AGREGAR)
     NUEVA_LINEA,
-    EOF
+    EOF,
+
+    // ===== OPERADORES ARITMÉTICOS =====
+    MODULO,          // %
+
+    // ===== OPERADORES RELACIONALES =====
+    IGUAL_IGUAL,     // ==
+    DIFERENTE,       // !=
+    MAYOR,           // >
+    MENOR,           //
+    MAYOR_IGUAL,     // >=
+    MENOR_IGUAL,     // <=
+
+    // ===== ASIGNACIÓN COMPUESTA =====
+    MAS_IGUAL,       // +=
+    MENOS_IGUAL,     // -=
+    MULT_IGUAL,      // *=
+    DIV_IGUAL,       // /=
+    MOD_IGUAL,       // %=
+
+    // ===== INCREMENTO Y DECREMENTO =====
+    INCREMENTO,      // ++
+    DECREMENTO,      // --
+
+    // ===== TERNARIO =====
+    INTERROGACION,   // ?
 }
