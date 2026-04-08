@@ -82,6 +82,19 @@ public class AnalizadorSemantico {
             validarExpresion(((ConversionNumero) expr).getExpresion());
         } else if (expr instanceof LlamadaFuncion) {
             analizarLlamadaFuncion((LlamadaFuncion) expr);
+        } else if (expr instanceof OperacionUnaria) {
+            validarExpresion(((OperacionUnaria) expr).getOperando());
+        } else if (expr instanceof OperacionTernaria) {
+            OperacionTernaria t = (OperacionTernaria) expr;
+            validarExpresion(t.getCondicion());
+            validarExpresion(t.getSiVerdadero());
+            validarExpresion(t.getSiFalso());
+        } else if (expr instanceof Asignacion) {
+            Asignacion a = (Asignacion) expr;
+            if (!tabla.existe(a.getNombre())) {
+                errores.add("Error: Variable '" + a.getNombre() + "' no declarada");
+            }
+            validarExpresion(a.getValor());
         }
         // LiteralNumero y LiteralString no necesitan validación
     }
@@ -109,17 +122,16 @@ public class AnalizadorSemantico {
         validarExpresion(concat.getDerecha());
     }
 
-    // Convertir string de tipo a TipoDato
     private TipoDato convertirTipo(String tipo) {
         switch (tipo.toLowerCase()) {
-            case "entero":
-                return TipoDato.ENTERO;
-            case "numero":
-                return TipoDato.NUMERO;
-            case "texto":
-                return TipoDato.TEXTO;
-            default:
-                return TipoDato.DESCONOCIDO;
+            case "entero":  return TipoDato.ENTERO;
+            case "numero":  return TipoDato.NUMERO;
+            case "texto":   return TipoDato.TEXTO;
+//            case "log":     return TipoDato.LOG;
+//            case "lista":   return TipoDato.LISTA;
+//            case "jsn":     return TipoDato.JSN;
+//            case "vacio":   return TipoDato.VACIO;
+            default:        return TipoDato.DESCONOCIDO;
         }
     }
 

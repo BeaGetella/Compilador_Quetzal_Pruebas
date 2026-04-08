@@ -5,4 +5,5 @@ public abstract class Nodo {
 
     // Método abstracto que todas las subclases deben implementar
     public abstract String toString();
+
 }
