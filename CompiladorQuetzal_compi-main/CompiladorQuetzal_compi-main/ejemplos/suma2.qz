@@ -1,0 +1,9 @@
+consola.mostrar("esto funciona?")
+consola.mostrar("------------------")
+entero a = 5
+entero b = 1
+entero c = 4
+
+entero operacion = (a*c) + b
+
+consola.mostrar("El resultado de esta operacion super conpleja es:" + operacion.texto())

@@ -1,0 +1,6 @@
+entero a = 10
+entero b = 2
+entero suma = a + b
+entero resta = a - b
+entero mult = a * b
+entero div = a / b

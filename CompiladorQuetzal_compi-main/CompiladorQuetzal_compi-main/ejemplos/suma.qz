@@ -1,0 +1,13 @@
+consola.mostrar("Suma de dos numeros")
+
+entero a = 10
+entero b = 2
+entero suma = a + b
+entero resta = a - b
+entero mult = a * b
+entero div = a / b
+
+consola.mostrar("El resultado de la suma es:" + suma.texto())
+consola.mostrar("El resultado de la resta es:" + resta.texto())
+consola.mostrar("El resultado de la multiplicacion es:" + mult.texto())
+consola.mostrar("El resultado de la division es:" + div.texto())

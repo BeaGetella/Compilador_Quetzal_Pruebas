@@ -1,0 +1,8 @@
+entero edad = 20
+
+si (edad > 18) {
+    consola.mostrar("Mayor de edad")
+} sino {
+    consola.mostrar("Menor de edad")
+}
+

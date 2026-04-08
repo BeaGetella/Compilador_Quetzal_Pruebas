@@ -1,0 +1,2 @@
+// Mi primer programa en Lenguaje Quetzal
+consola.mostrar("¡Hola, mundo desde Quetzal!")

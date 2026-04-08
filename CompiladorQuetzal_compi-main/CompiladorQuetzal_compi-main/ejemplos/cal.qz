@@ -1,0 +1,19 @@
+texto entrada_a = consola.pedir("Ingresar el primer numero: ")
+numero a = entrada_a.numero()
+
+texto entrada_b = consola.pedir("Ingresar el segundo numero: ")
+numero b = entrada_b.numero()
+
+numero suma = c + b
+consola.mostrar(t"Suma: {suma}")
+
+numero resta = a - b
+consola.mostrar(t"Resta: {resta}")
+
+numero multiplicacion = a * b
+consola.mostrar(t"Multiplicación: {multiplicacion}")
+
+numero division = a / b
+consola.mostrar(t"División: {division}")
+
+
