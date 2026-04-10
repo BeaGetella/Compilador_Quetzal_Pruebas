@@ -1,0 +1,3 @@
+entero n = -10
+entero absoluto = n < 0 ? -n : n
+consola.mostrar(t"absoluto: {absoluto}")

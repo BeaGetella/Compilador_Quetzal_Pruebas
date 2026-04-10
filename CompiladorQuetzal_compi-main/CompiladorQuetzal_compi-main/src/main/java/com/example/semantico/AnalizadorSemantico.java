@@ -37,12 +37,58 @@ public class AnalizadorSemantico {
             analizarDeclaracionVariable((DeclaracionVariable) instruccion);
         } else if (instruccion instanceof LlamadaFuncion) {
             analizarLlamadaFuncion((LlamadaFuncion) instruccion);
+<<<<<<< HEAD
         } else if (instruccion instanceof BuclePara) {
             // ── NUEVO ──────────────────────────────────────────────
             analizarBuclePara((BuclePara) instruccion);
         } else if (instruccion instanceof Expresion) {
             // Asignaciones sueltas (i++, i = i + 1, etc.)
             validarExpresion((Expresion) instruccion);
+=======
+        } else if (instruccion instanceof NodoSi) {
+            analizarSi((NodoSi) instruccion);
+        } else if (instruccion instanceof NodoMientras) {
+            analizarMientras((NodoMientras) instruccion);
+        } else if (instruccion instanceof NodoRomper) {
+            //  por ahora solo lo reconocemos
+        } else if (instruccion instanceof NodoContinuar) {
+            // por ahora solo lo reconocemos
+        }
+
+    }
+
+    private void analizarMientras(NodoMientras nodo) {
+        validarExpresion(nodo.getCondicion());
+
+        for (Nodo instruccion : nodo.getCuerpo()) {
+            analizarInstruccion(instruccion);
+        }
+    }
+
+
+    private void analizarSi(NodoSi nodo) {
+        // Validar la condición
+        validarExpresion(nodo.getCondicion());
+
+        // Validar cuerpo del si
+        for (Nodo instruccion : nodo.getCuerpoSi()) {
+            analizarInstruccion(instruccion);
+        }
+
+        // Validar cada sino si
+        for (int i = 0; i < nodo.getCondicionesSinoSi().size(); i++) {
+            validarExpresion(nodo.getCondicionesSinoSi().get(i));
+            for (Nodo instruccion : nodo.getCuerposSinoSi().get(i)) {
+                analizarInstruccion(instruccion);
+            }
+        }
+
+        // Validar cuerpo del sino si existe
+        if (nodo.tieneSino()) {
+            for (Nodo instruccion : nodo.getCuerpoSino()) {
+                analizarInstruccion(instruccion);
+            }
+>>>>>>> e15981498b4848c7bf32ceb4c5fb6bcc5e087416
         }
     }
 

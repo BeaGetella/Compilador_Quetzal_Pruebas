@@ -1,4 +1,4 @@
-entero edad = 17
+entero edad = 50
 
 si (edad > 18) {
     consola.mostrar("Mayor de edad")
