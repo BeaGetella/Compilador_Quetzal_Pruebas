@@ -37,29 +37,23 @@ public class AnalizadorSemantico {
             analizarDeclaracionVariable((DeclaracionVariable) instruccion);
         } else if (instruccion instanceof LlamadaFuncion) {
             analizarLlamadaFuncion((LlamadaFuncion) instruccion);
-<<<<<<< HEAD
         } else if (instruccion instanceof BuclePara) {
-            // ── NUEVO ──────────────────────────────────────────────
             analizarBuclePara((BuclePara) instruccion);
-        } else if (instruccion instanceof Expresion) {
-            // Asignaciones sueltas (i++, i = i + 1, etc.)
-            validarExpresion((Expresion) instruccion);
-=======
         } else if (instruccion instanceof NodoSi) {
             analizarSi((NodoSi) instruccion);
         } else if (instruccion instanceof NodoMientras) {
             analizarMientras((NodoMientras) instruccion);
         } else if (instruccion instanceof NodoRomper) {
-            //  por ahora solo lo reconocemos
+            // por ahora solo lo reconocemos
         } else if (instruccion instanceof NodoContinuar) {
             // por ahora solo lo reconocemos
         } else if (instruccion instanceof NodoHacerMientras) {
             analizarHacerMientras((NodoHacerMientras) instruccion);
+        } else if (instruccion instanceof Expresion) {
+            // Asignaciones sueltas (i++, i = i + 1, etc.)
+            validarExpresion((Expresion) instruccion);
         }
-
-
     }
-
 
     private void analizarHacerMientras(NodoHacerMientras nodo) {
         for (Nodo instruccion : nodo.getCuerpo()) {
@@ -75,7 +69,6 @@ public class AnalizadorSemantico {
             analizarInstruccion(instruccion);
         }
     }
-
 
     private void analizarSi(NodoSi nodo) {
         // Validar la condición
@@ -99,7 +92,6 @@ public class AnalizadorSemantico {
             for (Nodo instruccion : nodo.getCuerpoSino()) {
                 analizarInstruccion(instruccion);
             }
->>>>>>> e15981498b4848c7bf32ceb4c5fb6bcc5e087416
         }
     }
 
@@ -107,14 +99,12 @@ public class AnalizadorSemantico {
     //  ANÁLISIS DEL BUCLE PARA
     // ════════════════════════════════════════════════════════════════
     private void analizarBuclePara(BuclePara bucle) {
-        // Abrir un nuevo scope para que la variable del for (i) quede
-        // encapsulada y no contamine el scope exterior
         tabla.entrarScope();
 
         // 1. Inicialización: declara la variable del bucle
         analizarDeclaracionVariable(bucle.getInicializacion());
 
-        // 2. Condición: debe poder evaluarse (validamos variables referenciadas)
+        // 2. Condición: debe poder evaluarse
         validarExpresion(bucle.getCondicion());
 
         // 3. Incremento: i++, i--, i = i + 1, i += 1 ...
@@ -125,7 +115,6 @@ public class AnalizadorSemantico {
             analizarInstruccion(instruccion);
         }
 
-        // Cerrar el scope del for
         tabla.salirScope();
     }
 
@@ -162,7 +151,6 @@ public class AnalizadorSemantico {
         } else if (expr instanceof LlamadaFuncion) {
             analizarLlamadaFuncion((LlamadaFuncion) expr);
         } else if (expr instanceof OperacionUnaria) {
-            // i++ / i-- : verificar que la variable exista
             OperacionUnaria u = (OperacionUnaria) expr;
             validarExpresion(u.getOperando());
         } else if (expr instanceof OperacionTernaria) {

@@ -17,7 +17,6 @@ public class GeneradorBytecode {
     private TablaSimbolos tabla;
     private String nombreClase;
 
-    //Esto aqui aparecio cuando estoy incluyendo lo de mientras, para manejar los saltos
     private java.util.Deque<Label> pilaEtiquetasFin = new java.util.ArrayDeque<>();
     private java.util.Deque<Label> pilaEtiquetasInicio = new java.util.ArrayDeque<>();
 
@@ -75,131 +74,104 @@ public class GeneradorBytecode {
         } else if (instruccion instanceof LlamadaFuncion) {
             generarLlamadaConsola((LlamadaFuncion) instruccion);
         } else if (instruccion instanceof BuclePara) {
-            // ── NUEVO ──────────────────────────────────────────────
             generarBuclePara((BuclePara) instruccion);
+        } else if (instruccion instanceof Asignacion) {
+            generarAsignacion((Asignacion) instruccion);
+        } else if (instruccion instanceof OperacionUnaria) {
+            generarOperacionUnaria((OperacionUnaria) instruccion);
+        } else if (instruccion instanceof NodoSi) {
+            generarSi((NodoSi) instruccion);
+        } else if (instruccion instanceof NodoMientras) {
+            generarMientras((NodoMientras) instruccion);
+        } else if (instruccion instanceof NodoRomper) {
+            generarRomper();
+        } else if (instruccion instanceof NodoContinuar) {
+            generarContinuar();
+        } else if (instruccion instanceof NodoHacerMientras) {
+            generarHacerMientras((NodoHacerMientras) instruccion);
         } else if (instruccion instanceof Expresion) {
-            // Asignaciones sueltas, i++, etc.
             generarExpresionComoInstruccion((Expresion) instruccion);
         }
     }
 
     // ════════════════════════════════════════════════════════════════
     //  GENERACIÓN DEL BUCLE PARA
-    //
-    //  Bytecode equivalente a:
-    //    para (entero var i = 0; i < 5; i++) { cuerpo }
-    //
-    //  Se traduce a:
-    //    inicializacion          → entero var i = 0
-    //    label_inicio:
-    //      condicion             → i < 5
-    //      si FALSO → saltar a label_fin
-    //      cuerpo
-    //      incremento            → i++
-    //      GOTO label_inicio
-    //    label_fin:
     // ════════════════════════════════════════════════════════════════
     private void generarBuclePara(BuclePara bucle) {
-        // 1. Inicialización (ejecuta una sola vez antes del bucle)
         generarDeclaracionVariable(bucle.getInicializacion());
 
-        // 2. Labels de control
         Label labelInicio = new Label();
         Label labelFin    = new Label();
 
-        // 3. Marcar inicio del bucle
-        methodVisitor.visitLabel(labelInicio);
+        pilaEtiquetasInicio.push(labelInicio);
+        pilaEtiquetasFin.push(labelFin);
 
-        // 4. Evaluar condición → si es FALSA, saltar al fin
+        methodVisitor.visitLabel(labelInicio);
         generarCondicionSalto(bucle.getCondicion(), labelFin);
 
-        // 5. Generar cuerpo del bucle
         for (Nodo instruccion : bucle.getCuerpo()) {
             generarInstruccion(instruccion);
         }
 
-        // 6. Generar incremento (i++, i--, i += 1, etc.)
         generarExpresionComoInstruccion(bucle.getIncremento());
-
-        // 7. Volver al inicio
         methodVisitor.visitJumpInsn(GOTO, labelInicio);
-
-        // 8. Label de fin (aquí se aterriza cuando la condición es falsa)
         methodVisitor.visitLabel(labelFin);
+
+        pilaEtiquetasInicio.pop();
+        pilaEtiquetasFin.pop();
     }
 
-    /**
-     * Evalúa una expresión booleana/relacional y emite un salto condicional
-     * hacia labelFalso cuando la condición NO se cumple.
-     *
-     * Ejemplo: condicion "i < 5"
-     *   → genera ILOAD i, ICONST 5, IF_ICMPGE labelFalso
-     *   (si i >= 5 → salta al fin, es decir, sale del bucle)
-     */
     private void generarCondicionSalto(Expresion condicion, Label labelFalso) {
         if (condicion instanceof OperacionBinaria) {
             OperacionBinaria op = (OperacionBinaria) condicion;
             String operador = op.getOperador();
 
-            // Operadores relacionales: generar ambos operandos y saltar si la condición es FALSA
             switch (operador) {
                 case "<":
                     generarExpresion(op.getIzquierda());
                     generarExpresion(op.getDerecha());
-                    methodVisitor.visitJumpInsn(IF_ICMPGE, labelFalso); // sale si izq >= der
+                    methodVisitor.visitJumpInsn(IF_ICMPGE, labelFalso);
                     return;
                 case "<=":
                     generarExpresion(op.getIzquierda());
                     generarExpresion(op.getDerecha());
-                    methodVisitor.visitJumpInsn(IF_ICMPGT, labelFalso); // sale si izq > der
+                    methodVisitor.visitJumpInsn(IF_ICMPGT, labelFalso);
                     return;
                 case ">":
                     generarExpresion(op.getIzquierda());
                     generarExpresion(op.getDerecha());
-                    methodVisitor.visitJumpInsn(IF_ICMPLE, labelFalso); // sale si izq <= der
+                    methodVisitor.visitJumpInsn(IF_ICMPLE, labelFalso);
                     return;
                 case ">=":
                     generarExpresion(op.getIzquierda());
                     generarExpresion(op.getDerecha());
-                    methodVisitor.visitJumpInsn(IF_ICMPLT, labelFalso); // sale si izq < der
+                    methodVisitor.visitJumpInsn(IF_ICMPLT, labelFalso);
                     return;
                 case "==":
                     generarExpresion(op.getIzquierda());
                     generarExpresion(op.getDerecha());
-                    methodVisitor.visitJumpInsn(IF_ICMPNE, labelFalso); // sale si son distintos
+                    methodVisitor.visitJumpInsn(IF_ICMPNE, labelFalso);
                     return;
                 case "!=":
                     generarExpresion(op.getIzquierda());
                     generarExpresion(op.getDerecha());
-                    methodVisitor.visitJumpInsn(IF_ICMPEQ, labelFalso); // sale si son iguales
+                    methodVisitor.visitJumpInsn(IF_ICMPEQ, labelFalso);
                     return;
             }
         }
 
-        // Fallback: evaluar como expresión booleana (0 = falso)
         generarExpresion(condicion);
         methodVisitor.visitJumpInsn(IFEQ, labelFalso);
     }
 
-    /**
-     * Genera una expresión que se usa como INSTRUCCIÓN (su resultado se descarta).
-     * Útil para: i++, i--, i = i + 1, i += 1
-     */
     private void generarExpresionComoInstruccion(Expresion expr) {
         if (expr instanceof OperacionUnaria) {
             generarIncrementoDecremento((OperacionUnaria) expr);
         } else if (expr instanceof Asignacion) {
             generarAsignacion((Asignacion) expr);
         }
-        // Si hubiera otros casos, se pueden agregar aquí
     }
 
-    /**
-     * Genera bytecode para i++ o i-- usando la instrucción IINC de JVM,
-     * que es la más eficiente para incrementar/decrementar variables locales enteras.
-     *
-     * IINC índice, delta  →  variable[índice] += delta
-     */
     private void generarIncrementoDecremento(OperacionUnaria unaria) {
         String operador = unaria.getOperador();
         Expresion operando = unaria.getOperando();
@@ -211,56 +183,118 @@ public class GeneradorBytecode {
 
             if (tipo == TipoDato.ENTERO || tipo == TipoDato.NUMERO) {
                 if (operador.equals("++")) {
-                    methodVisitor.visitIincInsn(indice, 1);   // i++  →  IINC i, 1
+                    methodVisitor.visitIincInsn(indice, 1);
                 } else if (operador.equals("--")) {
-                    methodVisitor.visitIincInsn(indice, -1);  // i--  →  IINC i, -1
+                    methodVisitor.visitIincInsn(indice, -1);
                 }
             }
         }
     }
 
-    /**
-     * Genera bytecode para asignaciones: i = expr, i += expr, i -= expr, etc.
-     */
-    private void generarAsignacion(Asignacion asignacion) {
-        String nombre    = asignacion.getNombre();
-        String operador  = asignacion.getOperador();
-        int indice       = tabla.obtenerIndice(nombre);
-        TipoDato tipo    = tabla.obtenerTipo(nombre);
+    // ════════════════════════════════════════════════════════════════
+    //  SI / SINO SI / SINO
+    // ════════════════════════════════════════════════════════════════
+    private void generarSi(NodoSi nodo) {
+        Label fin = new Label();
+        Label siguienteBloque = new Label();
 
-        if (operador.equals("=")) {
-            // Asignación simple
-            generarExpresion(asignacion.getValor());
-        } else {
-            // Asignación compuesta: cargar valor actual, calcular, guardar
-            if (tipo == TipoDato.TEXTO) {
-                methodVisitor.visitVarInsn(ALOAD, indice);
-            } else {
-                methodVisitor.visitVarInsn(ILOAD, indice);
+        generarExpresion(nodo.getCondicion());
+        methodVisitor.visitJumpInsn(IFEQ, siguienteBloque);
+
+        for (Nodo instruccion : nodo.getCuerpoSi()) {
+            generarInstruccion(instruccion);
+        }
+        methodVisitor.visitJumpInsn(GOTO, fin);
+
+        for (int i = 0; i < nodo.getCondicionesSinoSi().size(); i++) {
+            methodVisitor.visitLabel(siguienteBloque);
+            siguienteBloque = new Label();
+
+            generarExpresion(nodo.getCondicionesSinoSi().get(i));
+            methodVisitor.visitJumpInsn(IFEQ, siguienteBloque);
+
+            for (Nodo instruccion : nodo.getCuerposSinoSi().get(i)) {
+                generarInstruccion(instruccion);
             }
-            generarExpresion(asignacion.getValor());
+            methodVisitor.visitJumpInsn(GOTO, fin);
+        }
 
-            switch (operador) {
-                case "+=": methodVisitor.visitInsn(IADD); break;
-                case "-=": methodVisitor.visitInsn(ISUB); break;
-                case "*=": methodVisitor.visitInsn(IMUL); break;
-                case "/=": methodVisitor.visitInsn(IDIV); break;
-                case "%=": methodVisitor.visitInsn(IREM); break;
+        methodVisitor.visitLabel(siguienteBloque);
+        if (nodo.tieneSino()) {
+            for (Nodo instruccion : nodo.getCuerpoSino()) {
+                generarInstruccion(instruccion);
             }
         }
 
-        // Guardar resultado
-        if (tipo == TipoDato.TEXTO) {
-            methodVisitor.visitVarInsn(ASTORE, indice);
-        } else {
-            methodVisitor.visitVarInsn(ISTORE, indice);
-        }
+        methodVisitor.visitLabel(fin);
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  Código existente sin cambios
+    //  MIENTRAS
     // ════════════════════════════════════════════════════════════════
+    private void generarMientras(NodoMientras nodo) {
+        Label inicio = new Label();
+        Label fin    = new Label();
 
+        pilaEtiquetasInicio.push(inicio);
+        pilaEtiquetasFin.push(fin);
+
+        methodVisitor.visitLabel(inicio);
+        generarExpresion(nodo.getCondicion());
+        methodVisitor.visitJumpInsn(IFEQ, fin);
+
+        for (Nodo instruccion : nodo.getCuerpo()) {
+            generarInstruccion(instruccion);
+        }
+
+        methodVisitor.visitJumpInsn(GOTO, inicio);
+        methodVisitor.visitLabel(fin);
+
+        pilaEtiquetasInicio.pop();
+        pilaEtiquetasFin.pop();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  HACER MIENTRAS
+    // ════════════════════════════════════════════════════════════════
+    private void generarHacerMientras(NodoHacerMientras nodo) {
+        Label inicio = new Label();
+        Label fin    = new Label();
+
+        pilaEtiquetasInicio.push(inicio);
+        pilaEtiquetasFin.push(fin);
+
+        methodVisitor.visitLabel(inicio);
+
+        for (Nodo instruccion : nodo.getCuerpo()) {
+            generarInstruccion(instruccion);
+        }
+
+        generarExpresion(nodo.getCondicion());
+        methodVisitor.visitJumpInsn(IFNE, inicio);
+        methodVisitor.visitLabel(fin);
+
+        pilaEtiquetasInicio.pop();
+        pilaEtiquetasFin.pop();
+    }
+
+    private void generarRomper() {
+        if (pilaEtiquetasFin.isEmpty()) {
+            throw new RuntimeException("'romper' usado fuera de un bucle");
+        }
+        methodVisitor.visitJumpInsn(GOTO, pilaEtiquetasFin.peek());
+    }
+
+    private void generarContinuar() {
+        if (pilaEtiquetasInicio.isEmpty()) {
+            throw new RuntimeException("'continuar' usado fuera de un bucle");
+        }
+        methodVisitor.visitJumpInsn(GOTO, pilaEtiquetasInicio.peek());
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  DECLARACIÓN DE VARIABLE
+    // ════════════════════════════════════════════════════════════════
     private void generarDeclaracionVariable(DeclaracionVariable decl) {
         int indiceVariable = tabla.obtenerIndice(decl.getNombre());
         generarExpresion(decl.getValor());
@@ -280,42 +314,35 @@ public class GeneradorBytecode {
             generarVariable((Variable) expresion);
         } else if (expresion instanceof OperacionBinaria) {
             generarOperacionBinaria((OperacionBinaria) expresion);
-        }  else if (expresion instanceof ConversionNumero) {
+        } else if (expresion instanceof ConversionNumero) {
             generarConversionNumero((ConversionNumero) expresion);
         } else if (expresion instanceof LlamadaFuncion) {
             generarLlamadaConsola((LlamadaFuncion) expresion);
         } else if (expresion instanceof OperacionUnaria) {
-            // Para cuando i++ se usa como VALOR (no como instrucción)
-            generarIncrementoDecremento((OperacionUnaria) expresion);
-            // Después del IINC, cargamos el valor actualizado
-            Expresion operando = ((OperacionUnaria) expresion).getOperando();
-            if (operando instanceof Variable) {
-                generarVariable((Variable) operando);
-            }
+            generarOperacionUnaria((OperacionUnaria) expresion);
         } else if (expresion instanceof Asignacion) {
             generarAsignacion((Asignacion) expresion);
-        }
-     else if (expresion instanceof Asignacion) {
-        generarAsignacion((Asignacion) expresion);
-    } else if (expresion instanceof OperacionUnaria) {
-        generarOperacionUnaria((OperacionUnaria) expresion);
         } else if (expresion instanceof OperacionTernaria) {
             generarTernario((OperacionTernaria) expresion);
         }
     }
 
     private void generarAsignacion(Asignacion asignacion) {
-        String nombre = asignacion.getNombre();
-        int indice = tabla.obtenerIndice(nombre);
+        String nombre   = asignacion.getNombre();
         String operador = asignacion.getOperador();
+        int indice      = tabla.obtenerIndice(nombre);
+        TipoDato tipo   = tabla.obtenerTipo(nombre);
 
         if (operador.equals("=")) {
-            // Asignación simple
             generarExpresion(asignacion.getValor());
         } else {
-            // Asignación compuesta: cargar valor actual + operar + guardar
-            methodVisitor.visitVarInsn(ILOAD, indice);
+            if (tipo == TipoDato.TEXTO) {
+                methodVisitor.visitVarInsn(ALOAD, indice);
+            } else {
+                methodVisitor.visitVarInsn(ILOAD, indice);
+            }
             generarExpresion(asignacion.getValor());
+
             switch (operador) {
                 case "+=": methodVisitor.visitInsn(IADD); break;
                 case "-=": methodVisitor.visitInsn(ISUB); break;
@@ -325,28 +352,23 @@ public class GeneradorBytecode {
             }
         }
 
-        methodVisitor.visitVarInsn(ISTORE, indice);
+        if (tipo == TipoDato.TEXTO) {
+            methodVisitor.visitVarInsn(ASTORE, indice);
+        } else {
+            methodVisitor.visitVarInsn(ISTORE, indice);
+        }
     }
 
     private void generarTernario(OperacionTernaria ternario) {
         Label siFalso = new Label();
         Label fin     = new Label();
 
-        // Evaluar condición
         generarExpresion(ternario.getCondicion());
-
-        // Si condición == 0 (falso) salta a siFalso
         methodVisitor.visitJumpInsn(IFEQ, siFalso);
-
-        // Rama verdadera
         generarExpresion(ternario.getSiVerdadero());
         methodVisitor.visitJumpInsn(GOTO, fin);
-
-        // Rama falsa
         methodVisitor.visitLabel(siFalso);
         generarExpresion(ternario.getSiFalso());
-
-        // Fin — aquí el stack tiene el valor correcto
         methodVisitor.visitLabel(fin);
     }
 
@@ -354,7 +376,6 @@ public class GeneradorBytecode {
         String operador = unaria.getOperador();
         Expresion operando = unaria.getOperando();
 
-        // no / ! → invertir booleano
         if (operador.equals("no") || operador.equals("!")) {
             generarExpresion(operando);
             Label verdadero = new Label();
@@ -368,14 +389,12 @@ public class GeneradorBytecode {
             return;
         }
 
-        // negación aritmética: -x
         if (operador.equals("-")) {
             generarExpresion(operando);
             methodVisitor.visitInsn(INEG);
             return;
         }
 
-        // ++ y -- solo aplican a variables
         if (!(operando instanceof Variable)) {
             throw new RuntimeException("++ y -- solo aplican a variables");
         }
@@ -388,7 +407,6 @@ public class GeneradorBytecode {
         } else if (operador.equals("--")) {
             methodVisitor.visitIincInsn(indice, -1);
         }
-
     }
 
     private void generarLiteralNumero(LiteralNumero literal) {
@@ -506,11 +524,6 @@ public class GeneradorBytecode {
 
         methodVisitor.visitCode();
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> e15981498b4848c7bf32ceb4c5fb6bcc5e087416
         for (Nodo instruccion : programa.getInstrucciones()) {
             generarInstruccion(instruccion);
         }
@@ -528,139 +541,6 @@ public class GeneradorBytecode {
         System.out.println("Archivo generado: " + archivoSalida);
     }
 
-<<<<<<< HEAD
-=======
-
-    private void generarSi(NodoSi nodo) {
-        Label fin = new Label();
-
-        // Evaluar condición
-        generarExpresion(nodo.getCondicion());
-
-        // Si es falso salta afuera o al siguiente bloque
-        Label siguienteBloque = new Label();
-        methodVisitor.visitJumpInsn(IFEQ, siguienteBloque);
-
-        // Cuerpo del si
-        for (Nodo instruccion : nodo.getCuerpoSi()) {
-            generarInstruccion(instruccion);
-        }
-        methodVisitor.visitJumpInsn(GOTO, fin);
-
-        // Sino si encadenados
-        for (int i = 0; i < nodo.getCondicionesSinoSi().size(); i++) {
-            methodVisitor.visitLabel(siguienteBloque);
-            siguienteBloque = new Label();
-
-            generarExpresion(nodo.getCondicionesSinoSi().get(i));
-            methodVisitor.visitJumpInsn(IFEQ, siguienteBloque);
-
-            for (Nodo instruccion : nodo.getCuerposSinoSi().get(i)) {
-                generarInstruccion(instruccion);
-            }
-            methodVisitor.visitJumpInsn(GOTO, fin);
-        }
-
-        // Sino final
-        methodVisitor.visitLabel(siguienteBloque);
-        if (nodo.tieneSino()) {
-            for (Nodo instruccion : nodo.getCuerpoSino()) {
-                generarInstruccion(instruccion);
-            }
-        }
-
-        methodVisitor.visitLabel(fin);
-    }
-
-    private void generarInstruccion(Nodo instruccion) {
-        if (instruccion instanceof DeclaracionVariable) {
-            generarDeclaracionVariable((DeclaracionVariable) instruccion);
-        } else if (instruccion instanceof LlamadaFuncion) {
-            generarLlamadaConsola((LlamadaFuncion) instruccion);
-        } else if (instruccion instanceof Asignacion) {
-            generarAsignacion((Asignacion) instruccion);
-        } else if (instruccion instanceof OperacionUnaria) {
-            generarOperacionUnaria((OperacionUnaria) instruccion);
-        } else if (instruccion instanceof NodoSi) {
-            generarSi((NodoSi) instruccion);
-        } else if (instruccion instanceof NodoMientras) {
-            generarMientras((NodoMientras) instruccion);
-        } else if (instruccion instanceof NodoRomper) {
-            generarRomper();
-        } else if (instruccion instanceof NodoContinuar) {
-            generarContinuar();
-        } else if (instruccion instanceof NodoHacerMientras) {
-            generarHacerMientras((NodoHacerMientras) instruccion);
-        }
-
-    }
-
-    private void generarHacerMientras(NodoHacerMientras nodo) {
-        Label inicio = new Label();
-        Label fin    = new Label();
-
-        // Empujar etiquetas para romper/continuar
-        pilaEtiquetasInicio.push(inicio);
-        pilaEtiquetasFin.push(fin);
-
-        // Etiqueta de inicio — el cuerpo se ejecuta PRIMERO
-        methodVisitor.visitLabel(inicio);
-
-        for (Nodo instruccion : nodo.getCuerpo()) {
-            generarInstruccion(instruccion);
-        }
-
-        // Evaluar condición DESPUÉS del cuerpo
-        generarExpresion(nodo.getCondicion());
-
-        // Si es verdadero vuelve al inicio
-        methodVisitor.visitJumpInsn(IFNE, inicio);
-
-        methodVisitor.visitLabel(fin);
-
-        // Sacar etiquetas
-        pilaEtiquetasInicio.pop();
-        pilaEtiquetasFin.pop();
-    }
-
-    private void generarRomper() {
-        if (pilaEtiquetasFin.isEmpty()) {
-            throw new RuntimeException("'romper' usado fuera de un bucle");
-        }
-        methodVisitor.visitJumpInsn(GOTO, pilaEtiquetasFin.peek());
-    }
-
-    private void generarContinuar() {
-        if (pilaEtiquetasInicio.isEmpty()) {
-            throw new RuntimeException("'continuar' usado fuera de un bucle");
-        }
-        methodVisitor.visitJumpInsn(GOTO, pilaEtiquetasInicio.peek());
-    }
-    private void generarMientras(NodoMientras nodo) {
-        Label inicio = new Label();
-        Label fin    = new Label();
-
-        // Empujar etiquetas para romper/continuar
-        pilaEtiquetasInicio.push(inicio);
-        pilaEtiquetasFin.push(fin);
-
-        methodVisitor.visitLabel(inicio);
-        generarExpresion(nodo.getCondicion());
-        methodVisitor.visitJumpInsn(IFEQ, fin);
-
-        for (Nodo instruccion : nodo.getCuerpo()) {
-            generarInstruccion(instruccion);
-        }
-
-        methodVisitor.visitJumpInsn(GOTO, inicio);
-        methodVisitor.visitLabel(fin);
-
-        // Sacar etiquetas al salir del bucle
-        pilaEtiquetasInicio.pop();
-        pilaEtiquetasFin.pop();
-    }
-
->>>>>>> e15981498b4848c7bf32ceb4c5fb6bcc5e087416
     private void generarLlamadaConsola(LlamadaFuncion llamada) {
         String metodo = llamada.getMetodo();
 
@@ -691,14 +571,11 @@ public class GeneradorBytecode {
     private void generarExpresionString(Expresion expr) {
         if (expr instanceof LiteralString) {
             methodVisitor.visitLdcInsn(((LiteralString) expr).getValor());
-
         } else if (expr instanceof Concatenacion) {
             generarConcatenacion((Concatenacion) expr);
-
         } else if (expr instanceof ConversionTexto) {
             generarExpresion(((ConversionTexto) expr).getExpresion());
             methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(I)Ljava/lang/String;", false);
-
         } else if (expr instanceof Variable) {
             String nombre = ((Variable) expr).getNombre();
             generarVariable((Variable) expr);
@@ -707,7 +584,6 @@ public class GeneradorBytecode {
             if (tipo != TipoDato.TEXTO) {
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(I)Ljava/lang/String;", false);
             }
-
         } else if (expr instanceof LiteralNumero) {
             generarLiteralNumero((LiteralNumero) expr);
             methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(I)Ljava/lang/String;", false);
@@ -730,13 +606,18 @@ public class GeneradorBytecode {
             methodVisitor.visitLdcInsn(((LiteralString) expr).getValor());
             methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
 
-<<<<<<< HEAD
         } else if (expr instanceof ConversionTexto) {
-            generarExpresion(((ConversionTexto) expr).getExpresion());
-            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(I)Ljava/lang/StringBuilder;", false);
+            Expresion interna = ((ConversionTexto) expr).getExpresion();
+            generarExpresion(interna);
+            TipoDato tipo = (interna instanceof Variable)
+                    ? tabla.obtenerTipo(((Variable) interna).getNombre())
+                    : TipoDato.ENTERO;
+            if (tipo == TipoDato.TEXTO) {
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
+            } else {
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(I)Ljava/lang/StringBuilder;", false);
+            }
 
-=======
->>>>>>> e15981498b4848c7bf32ceb4c5fb6bcc5e087416
         } else if (expr instanceof Variable) {
             String nombre = ((Variable) expr).getNombre();
             generarVariable((Variable) expr);
@@ -755,41 +636,14 @@ public class GeneradorBytecode {
         } else if (expr instanceof Concatenacion) {
             agregarAStringBuilder(((Concatenacion) expr).getIzquierda());
             agregarAStringBuilder(((Concatenacion) expr).getDerecha());
+
         } else if (expr instanceof OperacionBinaria) {
-            // Resultado es int (aritmético → valor, relacional/lógico → 0 ó 1)
             generarExpresion(expr);
-            methodVisitor.visitMethodInsn(
-                    INVOKEVIRTUAL, "java/lang/StringBuilder",
-                    "append", "(I)Ljava/lang/StringBuilder;", false
-            );
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(I)Ljava/lang/StringBuilder;", false);
 
         } else if (expr instanceof OperacionUnaria) {
-            // no r1, !x, -n → resultado int
             generarExpresion(expr);
-            methodVisitor.visitMethodInsn(
-                    INVOKEVIRTUAL, "java/lang/StringBuilder",
-                    "append", "(I)Ljava/lang/StringBuilder;", false
-            );
-
-        } else if (expr instanceof ConversionTexto) {
-            Expresion interna = ((ConversionTexto) expr).getExpresion();
-            generarExpresion(interna);
-            // ConversionTexto sobre texto → String; sobre cualquier otro → int
-            TipoDato tipo = (interna instanceof Variable)
-                    ? tabla.obtenerTipo(((Variable) interna).getNombre())
-                    : TipoDato.ENTERO;
-            if (tipo == TipoDato.TEXTO) {
-                methodVisitor.visitMethodInsn(
-                        INVOKEVIRTUAL, "java/lang/StringBuilder",
-                        "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false
-                );
-            } else {
-                methodVisitor.visitMethodInsn(
-                        INVOKEVIRTUAL, "java/lang/StringBuilder",
-                        "append", "(I)Ljava/lang/StringBuilder;", false
-                );
-            }
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(I)Ljava/lang/StringBuilder;", false);
         }
-
     }
 }
