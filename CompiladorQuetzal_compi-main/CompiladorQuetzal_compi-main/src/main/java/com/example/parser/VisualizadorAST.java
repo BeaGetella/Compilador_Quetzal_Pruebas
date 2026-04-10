@@ -10,6 +10,7 @@ public class VisualizadorAST {
     private static final String VERTICAL = "│   ";
     private static final String ESPACIO = "    ";
 
+    //recorre todas las instrucciones del programa y llama a imprimirNodo para cada una, pasando el prefijo y si es la última instrucción o no
     public static void imprimir(Programa programa) {
         System.out.println("\nARBOL SINTACTICO (AST):");
         System.out.println("─────────────────────────────");
@@ -37,6 +38,9 @@ public class VisualizadorAST {
         imprimirExpresion(decl.getValor(), prefijo + nuevoPrefijo, true);
     }
 
+    //imprime la información de la llamada a función, incluyendo el nombre del método
+    // y luego recorre los argumentos de la función, llamando a imprimirExpresion para
+    // cada uno, ajustando el prefijo y si es el último argumento o no
     private static void imprimirLlamadaFuncion(LlamadaFuncion llamada, String prefijo, String marcador, String nuevoPrefijo) {
         System.out.println(prefijo + marcador + "LlamadaFuncion (consola." + llamada.getMetodo() + ")");
 
@@ -47,6 +51,10 @@ public class VisualizadorAST {
         }
     }
 
+    //imprime cada tipo de expresión con su información relevante,
+    // y para las expresiones compuestas como OperacionBinaria o Concatenacion,
+    // llama recursivamente a imprimirExpresion para sus subexpresiones,
+    // ajustando el prefijo y si es la última rama o no
     private static void imprimirExpresion(Expresion expr, String prefijo, boolean esUltimo) {
         String marcador = esUltimo ? ULTIMA_RAMA : RAMA;
         String nuevoPrefijo = esUltimo ? ESPACIO : VERTICAL;

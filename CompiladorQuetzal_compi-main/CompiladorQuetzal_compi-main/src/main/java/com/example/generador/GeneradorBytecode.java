@@ -22,50 +22,37 @@ public class GeneradorBytecode {
     }
 
     public void generar(Programa programa, String archivoSalida) throws IOException {
-        // Crear el ClassWriter
         classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
 
-        // Definir la clase
         classWriter.visit(
-                V11,                          // Versión de Java
-                ACC_PUBLIC,                   // Modificadores
-                nombreClase,                  // Nombre de la clase
-                null,                         // Signature (generics)
-                "java/lang/Object",           // Superclase
-                null                          // Interfaces
+                V11,
+                ACC_PUBLIC,
+                nombreClase,
+                null,
+                "java/lang/Object",
+                null
         );
 
-        // Crear el método main
         methodVisitor = classWriter.visitMethod(
-                ACC_PUBLIC | ACC_STATIC,      // public static
-                "main",                       // Nombre del método
-                "([Ljava/lang/String;)V",    // Descriptor (args[], retorna void)
-                null,                         // Signature
-                null                          // Excepciones
+                ACC_PUBLIC | ACC_STATIC,
+                "main",
+                "([Ljava/lang/String;)V",
+                null,
+                null
         );
 
         methodVisitor.visitCode();
 
-        // Generar código para cada instrucción del programa
         for (Nodo instruccion : programa.getInstrucciones()) {
-            if (instruccion instanceof DeclaracionVariable) {
-                generarDeclaracionVariable((DeclaracionVariable) instruccion);
-            } else if (instruccion instanceof LlamadaFuncion) {
-                generarLlamadaConsola((LlamadaFuncion) instruccion);
-            }
+            generarInstruccion(instruccion);
         }
 
-        // Retornar
         methodVisitor.visitInsn(RETURN);
-
-        // Finalizar método
-        methodVisitor.visitMaxs(0, 0); // Se calculan automáticamente
+        methodVisitor.visitMaxs(0, 0);
         methodVisitor.visitEnd();
 
-        // Finalizar clase
         classWriter.visitEnd();
 
-        // Escribir el archivo .class
         byte[] bytecode = classWriter.toByteArray();
         try (FileOutputStream fos = new FileOutputStream(archivoSalida)) {
             fos.write(bytecode);
@@ -74,15 +61,205 @@ public class GeneradorBytecode {
         System.out.println("Archivo generado: " + archivoSalida);
     }
 
+    // ════════════════════════════════════════════════════════════════
+    //  DISPATCHER DE INSTRUCCIONES
+    // ════════════════════════════════════════════════════════════════
+    private void generarInstruccion(Nodo instruccion) {
+        if (instruccion instanceof DeclaracionVariable) {
+            generarDeclaracionVariable((DeclaracionVariable) instruccion);
+        } else if (instruccion instanceof LlamadaFuncion) {
+            generarLlamadaConsola((LlamadaFuncion) instruccion);
+        } else if (instruccion instanceof BuclePara) {
+            // ── NUEVO ──────────────────────────────────────────────
+            generarBuclePara((BuclePara) instruccion);
+        } else if (instruccion instanceof Expresion) {
+            // Asignaciones sueltas, i++, etc.
+            generarExpresionComoInstruccion((Expresion) instruccion);
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  GENERACIÓN DEL BUCLE PARA
+    //
+    //  Bytecode equivalente a:
+    //    para (entero var i = 0; i < 5; i++) { cuerpo }
+    //
+    //  Se traduce a:
+    //    inicializacion          → entero var i = 0
+    //    label_inicio:
+    //      condicion             → i < 5
+    //      si FALSO → saltar a label_fin
+    //      cuerpo
+    //      incremento            → i++
+    //      GOTO label_inicio
+    //    label_fin:
+    // ════════════════════════════════════════════════════════════════
+    private void generarBuclePara(BuclePara bucle) {
+        // 1. Inicialización (ejecuta una sola vez antes del bucle)
+        generarDeclaracionVariable(bucle.getInicializacion());
+
+        // 2. Labels de control
+        Label labelInicio = new Label();
+        Label labelFin    = new Label();
+
+        // 3. Marcar inicio del bucle
+        methodVisitor.visitLabel(labelInicio);
+
+        // 4. Evaluar condición → si es FALSA, saltar al fin
+        generarCondicionSalto(bucle.getCondicion(), labelFin);
+
+        // 5. Generar cuerpo del bucle
+        for (Nodo instruccion : bucle.getCuerpo()) {
+            generarInstruccion(instruccion);
+        }
+
+        // 6. Generar incremento (i++, i--, i += 1, etc.)
+        generarExpresionComoInstruccion(bucle.getIncremento());
+
+        // 7. Volver al inicio
+        methodVisitor.visitJumpInsn(GOTO, labelInicio);
+
+        // 8. Label de fin (aquí se aterriza cuando la condición es falsa)
+        methodVisitor.visitLabel(labelFin);
+    }
+
+    /**
+     * Evalúa una expresión booleana/relacional y emite un salto condicional
+     * hacia labelFalso cuando la condición NO se cumple.
+     *
+     * Ejemplo: condicion "i < 5"
+     *   → genera ILOAD i, ICONST 5, IF_ICMPGE labelFalso
+     *   (si i >= 5 → salta al fin, es decir, sale del bucle)
+     */
+    private void generarCondicionSalto(Expresion condicion, Label labelFalso) {
+        if (condicion instanceof OperacionBinaria) {
+            OperacionBinaria op = (OperacionBinaria) condicion;
+            String operador = op.getOperador();
+
+            // Operadores relacionales: generar ambos operandos y saltar si la condición es FALSA
+            switch (operador) {
+                case "<":
+                    generarExpresion(op.getIzquierda());
+                    generarExpresion(op.getDerecha());
+                    methodVisitor.visitJumpInsn(IF_ICMPGE, labelFalso); // sale si izq >= der
+                    return;
+                case "<=":
+                    generarExpresion(op.getIzquierda());
+                    generarExpresion(op.getDerecha());
+                    methodVisitor.visitJumpInsn(IF_ICMPGT, labelFalso); // sale si izq > der
+                    return;
+                case ">":
+                    generarExpresion(op.getIzquierda());
+                    generarExpresion(op.getDerecha());
+                    methodVisitor.visitJumpInsn(IF_ICMPLE, labelFalso); // sale si izq <= der
+                    return;
+                case ">=":
+                    generarExpresion(op.getIzquierda());
+                    generarExpresion(op.getDerecha());
+                    methodVisitor.visitJumpInsn(IF_ICMPLT, labelFalso); // sale si izq < der
+                    return;
+                case "==":
+                    generarExpresion(op.getIzquierda());
+                    generarExpresion(op.getDerecha());
+                    methodVisitor.visitJumpInsn(IF_ICMPNE, labelFalso); // sale si son distintos
+                    return;
+                case "!=":
+                    generarExpresion(op.getIzquierda());
+                    generarExpresion(op.getDerecha());
+                    methodVisitor.visitJumpInsn(IF_ICMPEQ, labelFalso); // sale si son iguales
+                    return;
+            }
+        }
+
+        // Fallback: evaluar como expresión booleana (0 = falso)
+        generarExpresion(condicion);
+        methodVisitor.visitJumpInsn(IFEQ, labelFalso);
+    }
+
+    /**
+     * Genera una expresión que se usa como INSTRUCCIÓN (su resultado se descarta).
+     * Útil para: i++, i--, i = i + 1, i += 1
+     */
+    private void generarExpresionComoInstruccion(Expresion expr) {
+        if (expr instanceof OperacionUnaria) {
+            generarIncrementoDecremento((OperacionUnaria) expr);
+        } else if (expr instanceof Asignacion) {
+            generarAsignacion((Asignacion) expr);
+        }
+        // Si hubiera otros casos, se pueden agregar aquí
+    }
+
+    /**
+     * Genera bytecode para i++ o i-- usando la instrucción IINC de JVM,
+     * que es la más eficiente para incrementar/decrementar variables locales enteras.
+     *
+     * IINC índice, delta  →  variable[índice] += delta
+     */
+    private void generarIncrementoDecremento(OperacionUnaria unaria) {
+        String operador = unaria.getOperador();
+        Expresion operando = unaria.getOperando();
+
+        if (operando instanceof Variable) {
+            String nombre = ((Variable) operando).getNombre();
+            int indice = tabla.obtenerIndice(nombre);
+            TipoDato tipo = tabla.obtenerTipo(nombre);
+
+            if (tipo == TipoDato.ENTERO || tipo == TipoDato.NUMERO) {
+                if (operador.equals("++")) {
+                    methodVisitor.visitIincInsn(indice, 1);   // i++  →  IINC i, 1
+                } else if (operador.equals("--")) {
+                    methodVisitor.visitIincInsn(indice, -1);  // i--  →  IINC i, -1
+                }
+            }
+        }
+    }
+
+    /**
+     * Genera bytecode para asignaciones: i = expr, i += expr, i -= expr, etc.
+     */
+    private void generarAsignacion(Asignacion asignacion) {
+        String nombre    = asignacion.getNombre();
+        String operador  = asignacion.getOperador();
+        int indice       = tabla.obtenerIndice(nombre);
+        TipoDato tipo    = tabla.obtenerTipo(nombre);
+
+        if (operador.equals("=")) {
+            // Asignación simple
+            generarExpresion(asignacion.getValor());
+        } else {
+            // Asignación compuesta: cargar valor actual, calcular, guardar
+            if (tipo == TipoDato.TEXTO) {
+                methodVisitor.visitVarInsn(ALOAD, indice);
+            } else {
+                methodVisitor.visitVarInsn(ILOAD, indice);
+            }
+            generarExpresion(asignacion.getValor());
+
+            switch (operador) {
+                case "+=": methodVisitor.visitInsn(IADD); break;
+                case "-=": methodVisitor.visitInsn(ISUB); break;
+                case "*=": methodVisitor.visitInsn(IMUL); break;
+                case "/=": methodVisitor.visitInsn(IDIV); break;
+                case "%=": methodVisitor.visitInsn(IREM); break;
+            }
+        }
+
+        // Guardar resultado
+        if (tipo == TipoDato.TEXTO) {
+            methodVisitor.visitVarInsn(ASTORE, indice);
+        } else {
+            methodVisitor.visitVarInsn(ISTORE, indice);
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Código existente sin cambios
+    // ════════════════════════════════════════════════════════════════
 
     private void generarDeclaracionVariable(DeclaracionVariable decl) {
-        // Obtener índice desde la tabla de símbolos
         int indiceVariable = tabla.obtenerIndice(decl.getNombre());
-
-        // Generar código para la expresión del lado derecho
         generarExpresion(decl.getValor());
 
-        // Guardar según el tipo (consultando la tabla)
         TipoDato tipo = tabla.obtenerTipo(decl.getNombre());
         if (tipo == TipoDato.TEXTO) {
             methodVisitor.visitVarInsn(ASTORE, indiceVariable);
@@ -91,7 +268,6 @@ public class GeneradorBytecode {
         }
     }
 
-    // ⭐ MODIFICADO - Ahora maneja LlamadaFuncion también
     private void generarExpresion(Expresion expresion) {
         if (expresion instanceof LiteralNumero) {
             generarLiteralNumero((LiteralNumero) expresion);
@@ -101,15 +277,24 @@ public class GeneradorBytecode {
             generarOperacionBinaria((OperacionBinaria) expresion);
         } else if (expresion instanceof ConversionNumero) {
             generarConversionNumero((ConversionNumero) expresion);
-        } else if (expresion instanceof LlamadaFuncion) { // ⭐ NUEVO
+        } else if (expresion instanceof LlamadaFuncion) {
             generarLlamadaConsola((LlamadaFuncion) expresion);
+        } else if (expresion instanceof OperacionUnaria) {
+            // Para cuando i++ se usa como VALOR (no como instrucción)
+            generarIncrementoDecremento((OperacionUnaria) expresion);
+            // Después del IINC, cargamos el valor actualizado
+            Expresion operando = ((OperacionUnaria) expresion).getOperando();
+            if (operando instanceof Variable) {
+                generarVariable((Variable) operando);
+            }
+        } else if (expresion instanceof Asignacion) {
+            generarAsignacion((Asignacion) expresion);
         }
     }
 
     private void generarLiteralNumero(LiteralNumero literal) {
         int valor = literal.getValor();
 
-        // Optimización: usar instrucciones específicas para valores pequeños
         if (valor >= -1 && valor <= 5) {
             methodVisitor.visitInsn(ICONST_0 + valor);
         } else if (valor >= -128 && valor <= 127) {
@@ -121,12 +306,9 @@ public class GeneradorBytecode {
         }
     }
 
-    // ⭐ MODIFICADO - Ahora maneja tipos (texto y numero)
     private void generarVariable(Variable variable) {
         String nombre = variable.getNombre();
-
-        // Obtener información de la tabla
-        int indice = tabla.obtenerIndice(nombre);
+        int indice    = tabla.obtenerIndice(nombre);
         TipoDato tipo = tabla.obtenerTipo(nombre);
 
         if (tipo == TipoDato.TEXTO) {
@@ -139,15 +321,13 @@ public class GeneradorBytecode {
     private void generarOperacionBinaria(OperacionBinaria operacion) {
         String operador = operacion.getOperador();
 
-        // Operadores lógicos cortocircuito: y, &&, o, ||
-        // Se manejan antes de generar los operandos
         if (operador.equals("y") || operador.equals("&&")) {
             Label falso = new Label();
             Label fin   = new Label();
             generarExpresion(operacion.getIzquierda());
-            methodVisitor.visitJumpInsn(IFEQ, falso);      // si izq == 0 → falso
+            methodVisitor.visitJumpInsn(IFEQ, falso);
             generarExpresion(operacion.getDerecha());
-            methodVisitor.visitJumpInsn(IFEQ, falso);      // si der == 0 → falso
+            methodVisitor.visitJumpInsn(IFEQ, falso);
             methodVisitor.visitInsn(ICONST_1);
             methodVisitor.visitJumpInsn(GOTO, fin);
             methodVisitor.visitLabel(falso);
@@ -160,7 +340,7 @@ public class GeneradorBytecode {
             Label verdadero = new Label();
             Label fin       = new Label();
             generarExpresion(operacion.getIzquierda());
-            methodVisitor.visitJumpInsn(IFNE, verdadero);  // si izq != 0 → verdadero
+            methodVisitor.visitJumpInsn(IFNE, verdadero);
             generarExpresion(operacion.getDerecha());
             methodVisitor.visitJumpInsn(IFNE, verdadero);
             methodVisitor.visitInsn(ICONST_0);
@@ -171,7 +351,6 @@ public class GeneradorBytecode {
             return;
         }
 
-        // Para el resto: generar ambos operandos primero
         generarExpresion(operacion.getIzquierda());
         generarExpresion(operacion.getDerecha());
 
@@ -179,14 +358,12 @@ public class GeneradorBytecode {
         Label fin       = new Label();
 
         switch (operador) {
-            // Aritméticos
             case "+":  methodVisitor.visitInsn(IADD); return;
             case "-":  methodVisitor.visitInsn(ISUB); return;
             case "*":  methodVisitor.visitInsn(IMUL); return;
             case "/":  methodVisitor.visitInsn(IDIV); return;
             case "%":  methodVisitor.visitInsn(IREM); return;
 
-            // Relacionales → producen 0 o 1
             case ">":  methodVisitor.visitJumpInsn(IF_ICMPGT, verdadero); break;
             case "<":  methodVisitor.visitJumpInsn(IF_ICMPLT, verdadero); break;
             case ">=": methodVisitor.visitJumpInsn(IF_ICMPGE, verdadero); break;
@@ -198,20 +375,16 @@ public class GeneradorBytecode {
                 throw new RuntimeException("Operador no soportado: " + operador);
         }
 
-        // Rama falso (no saltó)
         methodVisitor.visitInsn(ICONST_0);
         methodVisitor.visitJumpInsn(GOTO, fin);
-        // Rama verdadero
         methodVisitor.visitLabel(verdadero);
         methodVisitor.visitInsn(ICONST_1);
         methodVisitor.visitLabel(fin);
     }
 
     private void generarConversionNumero(ConversionNumero conversion) {
-        // Generar la expresión (debe ser un String)
         generarExpresion(conversion.getExpresion());
 
-        // Convertir String a double usando Double.parseDouble()
         methodVisitor.visitMethodInsn(
                 INVOKESTATIC,
                 "java/lang/Double",
@@ -220,56 +393,29 @@ public class GeneradorBytecode {
                 false
         );
 
-        // Convertir double a int
         methodVisitor.visitInsn(D2I);
     }
 
     public void generarConImpresion(Programa programa, String archivoSalida) throws IOException {
-        // Crear el ClassWriter
         classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
 
-        // Definir la clase
-        classWriter.visit(
-                V11,
-                ACC_PUBLIC,
-                nombreClase,
-                null,
-                "java/lang/Object",
-                null
-        );
+        classWriter.visit(V11, ACC_PUBLIC, nombreClase, null, "java/lang/Object", null);
 
-        // Crear el método main
         methodVisitor = classWriter.visitMethod(
-                ACC_PUBLIC | ACC_STATIC,
-                "main",
-                "([Ljava/lang/String;)V",
-                null,
-                null
+                ACC_PUBLIC | ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null
         );
 
         methodVisitor.visitCode();
 
-        // Generar código para cada instrucción del programa
         for (Nodo instruccion : programa.getInstrucciones()) {
-            if (instruccion instanceof DeclaracionVariable) {
-                DeclaracionVariable decl = (DeclaracionVariable) instruccion;
-                generarDeclaracionVariable(decl);
-            } else if (instruccion instanceof LlamadaFuncion) {
-                generarLlamadaConsola((LlamadaFuncion) instruccion);
-            }
+            generarInstruccion(instruccion);
         }
 
-        // Retornar
         methodVisitor.visitInsn(RETURN);
-
-        // Finalizar método
         methodVisitor.visitMaxs(0, 0);
         methodVisitor.visitEnd();
-
-        // Finalizar clase
         classWriter.visitEnd();
 
-        // Escribir el archivo .class
         byte[] bytecode = classWriter.toByteArray();
         try (FileOutputStream fos = new FileOutputStream(archivoSalida)) {
             fos.write(bytecode);
@@ -278,12 +424,10 @@ public class GeneradorBytecode {
         System.out.println("Archivo generado: " + archivoSalida);
     }
 
-    // ⭐ MODIFICADO - Ahora soporta mostrar() y pedir()
     private void generarLlamadaConsola(LlamadaFuncion llamada) {
         String metodo = llamada.getMetodo();
 
         if (metodo.equals("mostrar")) {
-            // System.out.println(...)
             methodVisitor.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
 
             if (!llamada.getArgumentos().isEmpty()) {
@@ -293,90 +437,67 @@ public class GeneradorBytecode {
             methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
 
         } else if (metodo.equals("pedir")) {
-            // Mostrar el mensaje (si hay argumento)
             if (!llamada.getArgumentos().isEmpty()) {
                 methodVisitor.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
                 generarExpresionString(llamada.getArgumentos().get(0));
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "print", "(Ljava/lang/String;)V", false);
             }
 
-            // Leer input con Scanner
-            // new Scanner(System.in)
             methodVisitor.visitTypeInsn(NEW, "java/util/Scanner");
             methodVisitor.visitInsn(DUP);
             methodVisitor.visitFieldInsn(GETSTATIC, "java/lang/System", "in", "Ljava/io/InputStream;");
             methodVisitor.visitMethodInsn(INVOKESPECIAL, "java/util/Scanner", "<init>", "(Ljava/io/InputStream;)V", false);
-
-            // scanner.nextLine()
             methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/util/Scanner", "nextLine", "()Ljava/lang/String;", false);
-
-            // El String queda en el stack
         }
     }
 
-    // Generar expresión de string
     private void generarExpresionString(Expresion expr) {
         if (expr instanceof LiteralString) {
-            // String literal directo
             methodVisitor.visitLdcInsn(((LiteralString) expr).getValor());
 
         } else if (expr instanceof Concatenacion) {
-            // Concatenación: usar StringBuilder
             generarConcatenacion((Concatenacion) expr);
 
         } else if (expr instanceof ConversionTexto) {
-            // Convertir número a string
             generarExpresion(((ConversionTexto) expr).getExpresion());
             methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(I)Ljava/lang/String;", false);
 
         } else if (expr instanceof Variable) {
-            // Agregar variable
             String nombre = ((Variable) expr).getNombre();
             generarVariable((Variable) expr);
 
             TipoDato tipo = tabla.obtenerTipo(nombre);
-            if (tipo == TipoDato.TEXTO) {
-                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
-            } else {
-                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(I)Ljava/lang/StringBuilder;", false);
+            if (tipo != TipoDato.TEXTO) {
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(I)Ljava/lang/String;", false);
             }
 
         } else if (expr instanceof LiteralNumero) {
-            // Número literal
             generarLiteralNumero((LiteralNumero) expr);
             methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(I)Ljava/lang/String;", false);
         }
     }
 
-    // Generar concatenación de strings
     private void generarConcatenacion(Concatenacion concat) {
-        // Crear StringBuilder
         methodVisitor.visitTypeInsn(NEW, "java/lang/StringBuilder");
         methodVisitor.visitInsn(DUP);
         methodVisitor.visitMethodInsn(INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V", false);
 
-        // Agregar elementos
         agregarAStringBuilder(concat.getIzquierda());
         agregarAStringBuilder(concat.getDerecha());
 
-        // Convertir a String
         methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false);
     }
 
-    // Agregar expresión al StringBuilder
     private void agregarAStringBuilder(Expresion expr) {
         if (expr instanceof LiteralString) {
-            // Agregar string
             methodVisitor.visitLdcInsn(((LiteralString) expr).getValor());
             methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
 
         } else if (expr instanceof ConversionTexto) {
-            // Agregar número convertido
             generarExpresion(((ConversionTexto) expr).getExpresion());
             methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(I)Ljava/lang/StringBuilder;", false);
 
         } else if (expr instanceof Variable) {
-            // Agregar variable
             String nombre = ((Variable) expr).getNombre();
             generarVariable((Variable) expr);
 
@@ -388,12 +509,10 @@ public class GeneradorBytecode {
             }
 
         } else if (expr instanceof LiteralNumero) {
-            // Agregar número literal
             generarLiteralNumero((LiteralNumero) expr);
             methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(I)Ljava/lang/StringBuilder;", false);
 
         } else if (expr instanceof Concatenacion) {
-            // Concatenación anidada
             agregarAStringBuilder(((Concatenacion) expr).getIzquierda());
             agregarAStringBuilder(((Concatenacion) expr).getDerecha());
         }
