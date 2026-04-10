@@ -16,13 +16,11 @@ public class AnalizadorSemantico {
         this.errores = new ArrayList<>();
     }
 
-    // Analizar el programa completo
     public TablaSimbolos analizar(Programa programa) {
         for (Nodo instruccion : programa.getInstrucciones()) {
             analizarInstruccion(instruccion);
         }
 
-        // Si hay errores, lanzar excepción
         if (!errores.isEmpty()) {
             StringBuilder sb = new StringBuilder();
             for (String error : errores) {
@@ -34,12 +32,19 @@ public class AnalizadorSemantico {
         return tabla;
     }
 
-    // Analizar una instrucción
     private void analizarInstruccion(Nodo instruccion) {
         if (instruccion instanceof DeclaracionVariable) {
             analizarDeclaracionVariable((DeclaracionVariable) instruccion);
         } else if (instruccion instanceof LlamadaFuncion) {
             analizarLlamadaFuncion((LlamadaFuncion) instruccion);
+<<<<<<< HEAD
+        } else if (instruccion instanceof BuclePara) {
+            // ── NUEVO ──────────────────────────────────────────────
+            analizarBuclePara((BuclePara) instruccion);
+        } else if (instruccion instanceof Expresion) {
+            // Asignaciones sueltas (i++, i = i + 1, etc.)
+            validarExpresion((Expresion) instruccion);
+=======
         } else if (instruccion instanceof NodoSi) {
             analizarSi((NodoSi) instruccion);
         } else if (instruccion instanceof NodoMientras) {
@@ -94,35 +99,55 @@ public class AnalizadorSemantico {
             for (Nodo instruccion : nodo.getCuerpoSino()) {
                 analizarInstruccion(instruccion);
             }
+>>>>>>> e15981498b4848c7bf32ceb4c5fb6bcc5e087416
         }
     }
 
-    // Analizar declaración de variable
+    // ════════════════════════════════════════════════════════════════
+    //  ANÁLISIS DEL BUCLE PARA
+    // ════════════════════════════════════════════════════════════════
+    private void analizarBuclePara(BuclePara bucle) {
+        // Abrir un nuevo scope para que la variable del for (i) quede
+        // encapsulada y no contamine el scope exterior
+        tabla.entrarScope();
+
+        // 1. Inicialización: declara la variable del bucle
+        analizarDeclaracionVariable(bucle.getInicializacion());
+
+        // 2. Condición: debe poder evaluarse (validamos variables referenciadas)
+        validarExpresion(bucle.getCondicion());
+
+        // 3. Incremento: i++, i--, i = i + 1, i += 1 ...
+        validarExpresion(bucle.getIncremento());
+
+        // 4. Cuerpo: cada instrucción dentro del bloque
+        for (Nodo instruccion : bucle.getCuerpo()) {
+            analizarInstruccion(instruccion);
+        }
+
+        // Cerrar el scope del for
+        tabla.salirScope();
+    }
+
     private void analizarDeclaracionVariable(DeclaracionVariable decl) {
-        // Convertir tipo string a TipoDato
         TipoDato tipo = convertirTipo(decl.getTipo());
 
-        // Agregar a la tabla
         try {
-            tabla.agregarVariable(decl.getNombre(), tipo, 0);  // línea 0 por ahora
+            tabla.agregarVariable(decl.getNombre(), tipo, 0);
         } catch (RuntimeException e) {
             errores.add(e.getMessage());
             return;
         }
 
-        // Validar la expresión del valor
         validarExpresion(decl.getValor());
     }
 
-    // Analizar llamada a función
     private void analizarLlamadaFuncion(LlamadaFuncion llamada) {
-        // Validar argumentos
         for (Expresion arg : llamada.getArgumentos()) {
             validarExpresion(arg);
         }
     }
 
-    // Validar expresión
     private void validarExpresion(Expresion expr) {
         if (expr instanceof Variable) {
             validarVariable((Variable) expr);
@@ -137,7 +162,9 @@ public class AnalizadorSemantico {
         } else if (expr instanceof LlamadaFuncion) {
             analizarLlamadaFuncion((LlamadaFuncion) expr);
         } else if (expr instanceof OperacionUnaria) {
-            validarExpresion(((OperacionUnaria) expr).getOperando());
+            // i++ / i-- : verificar que la variable exista
+            OperacionUnaria u = (OperacionUnaria) expr;
+            validarExpresion(u.getOperando());
         } else if (expr instanceof OperacionTernaria) {
             OperacionTernaria t = (OperacionTernaria) expr;
             validarExpresion(t.getCondicion());
@@ -153,7 +180,6 @@ public class AnalizadorSemantico {
         // LiteralNumero y LiteralString no necesitan validación
     }
 
-    // Validar que una variable exista
     private void validarVariable(Variable variable) {
         String nombre = variable.getNombre();
         if (!tabla.existe(nombre)) {
@@ -161,16 +187,11 @@ public class AnalizadorSemantico {
         }
     }
 
-    // Validar operación binaria
     private void validarOperacionBinaria(OperacionBinaria op) {
         validarExpresion(op.getIzquierda());
         validarExpresion(op.getDerecha());
-
-        // Aquí podrías agregar validación de tipos
-        // Por ejemplo, verificar que ambos operandos sean números
     }
 
-    // Validar concatenación
     private void validarConcatenacion(Concatenacion concat) {
         validarExpresion(concat.getIzquierda());
         validarExpresion(concat.getDerecha());
@@ -181,20 +202,14 @@ public class AnalizadorSemantico {
             case "entero":  return TipoDato.ENTERO;
             case "numero":  return TipoDato.NUMERO;
             case "texto":   return TipoDato.TEXTO;
-//            case "log":     return TipoDato.LOG;
-//            case "lista":   return TipoDato.LISTA;
-//            case "jsn":     return TipoDato.JSN;
-//            case "vacio":   return TipoDato.VACIO;
             default:        return TipoDato.DESCONOCIDO;
         }
     }
 
-    // Obtener tabla de símbolos
     public TablaSimbolos getTabla() {
         return tabla;
     }
 
-    // Obtener errores
     public List<String> getErrores() {
         return errores;
     }

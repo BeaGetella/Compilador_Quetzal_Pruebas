@@ -79,8 +79,9 @@ public enum TipoToken {
     PARENTESIS_DER,
     PUNTO,
     DOS_PUNTOS,
-    LLAVE_IZQ,       // { (AGREGAR)
-    LLAVE_DER,       // } (AGREGAR)
+    PUNTO_COMA,      // ;
+    LLAVE_IZQ,       // {
+    LLAVE_DER,       // }
     NUEVA_LINEA,
     EOF,
 
@@ -91,7 +92,7 @@ public enum TipoToken {
     IGUAL_IGUAL,     // ==
     DIFERENTE,       // !=
     MAYOR,           // >
-    MENOR,           //
+    MENOR,           // <
     MAYOR_IGUAL,     // >=
     MENOR_IGUAL,     // <=
 
