@@ -49,8 +49,26 @@ public class VisualizadorAST {
             System.out.println(prefijo + marcador + "NodoRomper");
         } else if (nodo instanceof NodoContinuar) {
             System.out.println(prefijo + marcador + "NodoContinuar");
+        } else if (nodo instanceof NodoHacerMientras) {
+            imprimirNodoHacerMientras((NodoHacerMientras) nodo, prefijo, marcador, nuevoPrefijo);
         }
 
+    }
+
+    private static void imprimirNodoHacerMientras(NodoHacerMientras nodo, String prefijo, String marcador, String nuevoPrefijo) {
+        System.out.println(prefijo + marcador + "NodoHacerMientras");
+
+        // Cuerpo primero
+        System.out.println(prefijo + nuevoPrefijo + RAMA + "Cuerpo:");
+        List<Nodo> cuerpo = nodo.getCuerpo();
+        for (int i = 0; i < cuerpo.size(); i++) {
+            boolean esUltimo = (i == cuerpo.size() - 1);
+            imprimirNodo(cuerpo.get(i), prefijo + nuevoPrefijo + VERTICAL, esUltimo);
+        }
+
+        // Condición después
+        System.out.println(prefijo + nuevoPrefijo + ULTIMA_RAMA + "Condicion:");
+        imprimirExpresion(nodo.getCondicion(), prefijo + nuevoPrefijo + ESPACIO, true);
     }
 
     private static void imprimirNodoMientras(NodoMientras nodo, String prefijo, String marcador, String nuevoPrefijo) {

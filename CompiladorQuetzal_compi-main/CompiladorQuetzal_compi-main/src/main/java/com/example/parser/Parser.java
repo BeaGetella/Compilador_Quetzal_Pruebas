@@ -97,11 +97,15 @@ public class Parser {
             return parsearContinuar();
         }
 
+        if (verificar(TipoToken.HACER)) {
+            return parsearHacerMientras();
+        }
+
         // Palabras reservadas reconocidas pero aún sin implementación
         if (
 //                verificar(TipoToken.SINO)        ||
                 verificar(TipoToken.PARA)        ||
-                verificar(TipoToken.HACER)       ||
+
                 verificar(TipoToken.RETORNAR)    ||
                 verificar(TipoToken.OBJETO)      ||
                 verificar(TipoToken.NUEVO)       ||
@@ -651,4 +655,21 @@ public class Parser {
         consumir(TipoToken.CONTINUAR, "Se esperaba 'continuar'");
         return new NodoContinuar();
     }
+
+    private NodoHacerMientras parsearHacerMientras() {
+        consumir(TipoToken.HACER, "Se esperaba 'hacer'");
+        saltarNuevasLineas();
+
+        List<Nodo> cuerpo = parsearBloque();
+
+        saltarNuevasLineas();
+        consumir(TipoToken.MIENTRAS, "Se esperaba 'mientras'");
+        consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+        Expresion condicion = parsearExpresion();
+        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+
+        return new NodoHacerMientras(cuerpo, condicion);
+    }
+
+
 }

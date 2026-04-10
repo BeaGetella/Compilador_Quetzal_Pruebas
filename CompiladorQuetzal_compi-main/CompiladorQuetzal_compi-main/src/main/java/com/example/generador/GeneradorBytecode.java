@@ -426,9 +426,40 @@ public class GeneradorBytecode {
             generarRomper();
         } else if (instruccion instanceof NodoContinuar) {
             generarContinuar();
+        } else if (instruccion instanceof NodoHacerMientras) {
+            generarHacerMientras((NodoHacerMientras) instruccion);
         }
 
     }
+
+    private void generarHacerMientras(NodoHacerMientras nodo) {
+        Label inicio = new Label();
+        Label fin    = new Label();
+
+        // Empujar etiquetas para romper/continuar
+        pilaEtiquetasInicio.push(inicio);
+        pilaEtiquetasFin.push(fin);
+
+        // Etiqueta de inicio — el cuerpo se ejecuta PRIMERO
+        methodVisitor.visitLabel(inicio);
+
+        for (Nodo instruccion : nodo.getCuerpo()) {
+            generarInstruccion(instruccion);
+        }
+
+        // Evaluar condición DESPUÉS del cuerpo
+        generarExpresion(nodo.getCondicion());
+
+        // Si es verdadero vuelve al inicio
+        methodVisitor.visitJumpInsn(IFNE, inicio);
+
+        methodVisitor.visitLabel(fin);
+
+        // Sacar etiquetas
+        pilaEtiquetasInicio.pop();
+        pilaEtiquetasFin.pop();
+    }
+
     private void generarRomper() {
         if (pilaEtiquetasFin.isEmpty()) {
             throw new RuntimeException("'romper' usado fuera de un bucle");

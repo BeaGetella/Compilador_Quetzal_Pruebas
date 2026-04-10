@@ -48,8 +48,19 @@ public class AnalizadorSemantico {
             //  por ahora solo lo reconocemos
         } else if (instruccion instanceof NodoContinuar) {
             // por ahora solo lo reconocemos
+        } else if (instruccion instanceof NodoHacerMientras) {
+            analizarHacerMientras((NodoHacerMientras) instruccion);
         }
 
+
+    }
+
+
+    private void analizarHacerMientras(NodoHacerMientras nodo) {
+        for (Nodo instruccion : nodo.getCuerpo()) {
+            analizarInstruccion(instruccion);
+        }
+        validarExpresion(nodo.getCondicion());
     }
 
     private void analizarMientras(NodoMientras nodo) {

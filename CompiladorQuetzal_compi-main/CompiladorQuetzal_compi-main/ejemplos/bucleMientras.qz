@@ -15,3 +15,9 @@ mientras (i < 10) {
     }
     consola.mostrar(t"i: {i}")
 }
+
+entero var x = 10
+hacer {
+    consola.mostrar(t"x: {x}")
+    x++
+} mientras (x < 5)
