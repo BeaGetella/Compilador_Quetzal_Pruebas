@@ -282,7 +282,20 @@ public class VisualizadorAST {
                 System.out.println(prefijo + nuevoPrefijo + (esUltimaEntrada ? ULTIMA_RAMA : RAMA) + entradas.get(i).getKey() + ":");
                 imprimirExpresion(entradas.get(i).getValue(), prefijo + nuevoPrefijo + (esUltimaEntrada ? ESPACIO : VERTICAL), true);
             }
-        }
+        } else if (expr instanceof LiteralLista) {
+            LiteralLista lista = (LiteralLista) expr;
+            System.out.println(prefijo + marcador + "LiteralLista");
+            List<Expresion> elementos = lista.getElementos();
+            for (int i = 0; i < elementos.size(); i++) {
+                boolean esUltimoElem = (i == elementos.size() - 1);
+                imprimirExpresion(elementos.get(i), prefijo + nuevoPrefijo, esUltimoElem);
+            }
+
+    } else if (expr instanceof AccesoJsn) {
+        AccesoJsn acceso = (AccesoJsn) expr;
+        System.out.println(prefijo + marcador + "AccesoJsn (." + acceso.getPropiedad() + ")");
+        imprimirExpresion(acceso.getObjeto(), prefijo + nuevoPrefijo, true);
+    }
 
     }
 }
