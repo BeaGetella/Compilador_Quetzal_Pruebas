@@ -1,0 +1,9 @@
+entero factorial(entero n) {
+    si (n == 0) {
+        retornar 1
+    }
+    retornar n * factorial(n - 1)
+}
+
+entero resultado = factorial(5)
+consola.mostrar(t"factorial: {resultado}")

@@ -1,0 +1,11 @@
+vacio saludar(texto nombre) {
+    consola.mostrar(t"Hola {nombre}")
+}
+
+entero sumar(entero a, entero b) {
+    retornar a + b
+}
+
+saludar("Mundo")
+entero resultado = sumar(3, 5)
+consola.mostrar(t"resultado: {resultado}")

@@ -52,8 +52,60 @@ public class VisualizadorAST {
             System.out.println(prefijo + marcador + "NodoContinuar");
         } else if (nodo instanceof NodoHacerMientras) {
             imprimirNodoHacerMientras((NodoHacerMientras) nodo, prefijo, marcador, nuevoPrefijo);
+        } else if (nodo instanceof BuclePara) {
+            imprimirBuclePara((BuclePara) nodo, prefijo, marcador, nuevoPrefijo);
+        } else if (nodo instanceof NodoFuncion) {
+            imprimirNodoFuncion((NodoFuncion) nodo, prefijo, marcador, nuevoPrefijo);
+        } else if (nodo instanceof NodoRetornar) {
+            NodoRetornar ret = (NodoRetornar) nodo;
+            System.out.println(prefijo + marcador + "NodoRetornar");
+            if (ret.tieneValor()) {
+                imprimirExpresion(ret.getValor(), prefijo + nuevoPrefijo, true);
+            }
         }
 
+    }
+
+    private static void imprimirNodoFuncion(NodoFuncion nodo, String prefijo, String marcador, String nuevoPrefijo) {
+        System.out.println(prefijo + marcador + "NodoFuncion (" + nodo.getTipoRetorno() + " " + nodo.getNombre() + ")");
+
+        // Parámetros
+        if (!nodo.getParametros().isEmpty()) {
+            System.out.println(prefijo + nuevoPrefijo + RAMA + "Parametros:");
+            for (String[] param : nodo.getParametros()) {
+                System.out.println(prefijo + nuevoPrefijo + VERTICAL + ULTIMA_RAMA + param[0] + " " + param[1]);
+            }
+        }
+
+        // Cuerpo
+        System.out.println(prefijo + nuevoPrefijo + ULTIMA_RAMA + "Cuerpo:");
+        List<Nodo> cuerpo = nodo.getCuerpo();
+        for (int i = 0; i < cuerpo.size(); i++) {
+            imprimirNodo(cuerpo.get(i), prefijo + nuevoPrefijo + ESPACIO, i == cuerpo.size() - 1);
+        }
+    }
+
+    private static void imprimirBuclePara(BuclePara nodo, String prefijo, String marcador, String nuevoPrefijo) {
+        System.out.println(prefijo + marcador + "BuclePara");
+
+        // Inicialización
+        System.out.println(prefijo + nuevoPrefijo + RAMA + "Inicializacion:");
+        imprimirNodo(nodo.getInicializacion(), prefijo + nuevoPrefijo + VERTICAL, true);
+
+        // Condición
+        System.out.println(prefijo + nuevoPrefijo + RAMA + "Condicion:");
+        imprimirExpresion(nodo.getCondicion(), prefijo + nuevoPrefijo + VERTICAL, true);
+
+        // Incremento
+        System.out.println(prefijo + nuevoPrefijo + RAMA + "Incremento:");
+        imprimirExpresion(nodo.getIncremento(), prefijo + nuevoPrefijo + VERTICAL, true);
+
+        // Cuerpo
+        System.out.println(prefijo + nuevoPrefijo + ULTIMA_RAMA + "Cuerpo:");
+        List<Nodo> cuerpo = nodo.getCuerpo();
+        for (int i = 0; i < cuerpo.size(); i++) {
+            imprimirNodo(cuerpo.get(i), prefijo + nuevoPrefijo + ESPACIO, i == cuerpo.size() - 1);
+        }
     }
 
     private static void imprimirNodoHacerMientras(NodoHacerMientras nodo, String prefijo, String marcador, String nuevoPrefijo) {
@@ -133,12 +185,14 @@ public class VisualizadorAST {
     // y luego recorre los argumentos de la función, llamando a imprimirExpresion para
     // cada uno, ajustando el prefijo y si es el último argumento o no
     private static void imprimirLlamadaFuncion(LlamadaFuncion llamada, String prefijo, String marcador, String nuevoPrefijo) {
-        System.out.println(prefijo + marcador + "LlamadaFuncion (consola." + llamada.getMetodo() + ")");
+        String nombre = (llamada.getObjeto() == null || llamada.getObjeto().isEmpty())
+                ? llamada.getMetodo()
+                : llamada.getObjeto() + "." + llamada.getMetodo();
+        System.out.println(prefijo + marcador + "LlamadaFuncion (" + nombre + ")");
 
         List<Expresion> argumentos = llamada.getArgumentos();
         for (int i = 0; i < argumentos.size(); i++) {
-            boolean esUltimo = (i == argumentos.size() - 1);
-            imprimirExpresion(argumentos.get(i), prefijo + nuevoPrefijo, esUltimo);
+            imprimirExpresion(argumentos.get(i), prefijo + nuevoPrefijo, i == argumentos.size() - 1);
         }
     }
 

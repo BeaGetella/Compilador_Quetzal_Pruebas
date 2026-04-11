@@ -5,5 +5,7 @@ public enum TipoDato {
     NUMERO,
     TEXTO,
     VOID,
+    OBJETO,
+    LOG,
     DESCONOCIDO
 }

@@ -1,0 +1,23 @@
+entero sumar_lista(lista<entero> nums) {
+    entero var total = 0
+    para (entero var n en nums) {
+        total += n
+    }
+    retornar total
+}
+
+entero maximo(lista<entero> nums) {
+    entero var max = nums.primero()
+    para (entero var n en nums) {
+        si (n > max) {
+            max = n
+        }
+    }
+    retornar max
+}
+
+lista<entero> numeros = [5, 3, 8, 1, 9, 2]
+entero suma = sumar_lista(numeros)
+entero max = maximo(numeros)
+consola.mostrar(t"suma: {suma}")
+consola.mostrar(t"maximo: {max}")

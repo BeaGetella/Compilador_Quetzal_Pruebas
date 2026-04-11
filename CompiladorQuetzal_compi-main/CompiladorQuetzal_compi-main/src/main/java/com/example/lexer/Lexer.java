@@ -322,6 +322,15 @@ public class Lexer {
                 case '?':
                     avanzar();
                     return new Token(TipoToken.INTERROGACION, "?", lineaActual);
+                case ',':
+                    avanzar();
+                    return new Token(TipoToken.COMA, ",", lineaActual);
+                case '[':
+                    avanzar();
+                    return new Token(TipoToken.CORCHETE_IZQ, "[", lineaActual);
+                case ']':
+                    avanzar();
+                    return new Token(TipoToken.CORCHETE_DER, "]", lineaActual);
 
                 default:
                     throw new RuntimeException("Caracter no reconocido: '" + caracterActual + "' en línea " + linea);

@@ -1,0 +1,4 @@
+texto agregar_sufijo(texto var base) {
+    base += " agregado"
+    retornar base
+}

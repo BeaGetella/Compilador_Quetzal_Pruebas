@@ -1,0 +1,6 @@
+entero multiplicar(entero a, entero b) {
+    retornar a * b
+}
+
+entero resultado = multiplicar(4, 5)
+consola.mostrar(t"resultado: {resultado}")

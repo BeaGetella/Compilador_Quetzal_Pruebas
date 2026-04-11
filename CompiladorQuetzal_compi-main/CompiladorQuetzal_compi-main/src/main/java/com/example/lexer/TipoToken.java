@@ -77,7 +77,10 @@ public enum TipoToken {
     DIVISION,
     PARENTESIS_IZQ,
     PARENTESIS_DER,
+    CORCHETE_IZQ,    // [
+    CORCHETE_DER,    // ]
     PUNTO,
+    COMA,   // ,
     DOS_PUNTOS,
     PUNTO_COMA,      // ;
     LLAVE_IZQ,       // {

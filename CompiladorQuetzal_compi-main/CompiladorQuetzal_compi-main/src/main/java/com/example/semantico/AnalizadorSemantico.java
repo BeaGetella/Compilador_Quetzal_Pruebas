@@ -6,10 +6,12 @@ import com.example.semantico.gestores.TablaSimbolos;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class AnalizadorSemantico {
     private TablaSimbolos tabla;
     private List<String> errores;
+    private Map<String, NodoObjeto> objetos = new java.util.HashMap<>();
 
     public AnalizadorSemantico() {
         this.tabla = new TablaSimbolos();
@@ -52,8 +54,138 @@ public class AnalizadorSemantico {
         } else if (instruccion instanceof Expresion) {
             // Asignaciones sueltas (i++, i = i + 1, etc.)
             validarExpresion((Expresion) instruccion);
+        } else if (instruccion instanceof NodoFuncion) {
+            analizarFuncion((NodoFuncion) instruccion);
+        } else if (instruccion instanceof NodoRetornar) {
+            analizarRetornar((NodoRetornar) instruccion);
+        } else if (instruccion instanceof NodoObjeto) {
+            analizarObjeto((NodoObjeto) instruccion);
+
+    } else if (instruccion instanceof NodoParaEn) {
+        analizarParaEn((NodoParaEn) instruccion);
+    }
+
+    }
+
+
+
+    private void analizarParaEn(NodoParaEn nodo) {
+        // Validar el iterable
+        validarExpresion(nodo.getIterable());
+
+        tabla.entrarScope();
+
+        // Registrar la variable del bucle
+        try {
+            tabla.agregarVariable(nodo.getNombreVariable(), convertirTipo(nodo.getTipoVariable()), 0);
+        } catch (RuntimeException e) {
+            errores.add(e.getMessage());
+        }
+
+        // Validar cuerpo
+        for (Nodo instruccion : nodo.getCuerpo()) {
+            analizarInstruccion(instruccion);
+        }
+
+        tabla.salirScope();
+    }
+
+    private void analizarObjeto(NodoObjeto nodo) {
+        // Registrar el objeto como tipo en la tabla
+        try {
+            tabla.agregarVariable(nodo.getNombre(), TipoDato.DESCONOCIDO, 0);
+        } catch (RuntimeException e) {
+            errores.add(e.getMessage());
+            return;
+        }
+
+        // Guardar el objeto para referencia futura
+        objetos.put(nodo.getNombre(), nodo);
+
+        // Entrar al scope del objeto
+        tabla.entrarScope();
+
+        // Registrar atributos
+        for (NodoAtributo attr : nodo.getAtributos()) {
+            try {
+                tabla.agregarVariable(attr.getNombre(), convertirTipo(attr.getTipo()), 0);
+            } catch (RuntimeException e) {
+                errores.add(e.getMessage());
+            }
+        }
+
+        // Validar constructor
+        if (nodo.getConstructor() != null) {
+            tabla.entrarScope();
+            for (String[] param : nodo.getConstructor().getParametros()) {
+                try {
+                    tabla.agregarVariable(param[1], convertirTipo(param[0]), 0);
+                } catch (RuntimeException e) {
+                    errores.add(e.getMessage());
+                }
+            }
+            for (Nodo instruccion : nodo.getConstructor().getCuerpo()) {
+                analizarInstruccion(instruccion);
+            }
+            tabla.salirScope();
+        }
+
+        // Validar métodos
+        for (NodoMetodo metodo : nodo.getMetodos()) {
+            tabla.entrarScope();
+            for (String[] param : metodo.getParametros()) {
+                try {
+                    tabla.agregarVariable(param[1], convertirTipo(param[0]), 0);
+                } catch (RuntimeException e) {
+                    errores.add(e.getMessage());
+                }
+            }
+            for (Nodo instruccion : metodo.getCuerpo()) {
+                analizarInstruccion(instruccion);
+            }
+            tabla.salirScope();
+        }
+
+        tabla.salirScope();
+    }
+
+    private void analizarFuncion(NodoFuncion nodo) {
+        // Registrar la función en la tabla
+        TipoDato tipoRetorno = convertirTipo(nodo.getTipoRetorno());
+        try {
+            tabla.agregarVariable(nodo.getNombre(), tipoRetorno, 0);
+        } catch (RuntimeException e) {
+            errores.add(e.getMessage());
+            return;
+        }
+
+        // Entrar al scope de la función
+        tabla.entrarScope();
+
+        // Registrar parámetros
+        for (String[] param : nodo.getParametros()) {
+            TipoDato tipoParam = convertirTipo(param[0]);
+            try {
+                tabla.agregarVariable(param[1], tipoParam, 0);
+            } catch (RuntimeException e) {
+                errores.add(e.getMessage());
+            }
+        }
+
+        // Validar cuerpo
+        for (Nodo instruccion : nodo.getCuerpo()) {
+            analizarInstruccion(instruccion);
+        }
+
+        tabla.salirScope();
+    }
+
+    private void analizarRetornar(NodoRetornar nodo) {
+        if (nodo.tieneValor()) {
+            validarExpresion(nodo.getValor());
         }
     }
+
 
     private void analizarHacerMientras(NodoHacerMientras nodo) {
         for (Nodo instruccion : nodo.getCuerpo()) {
@@ -160,12 +292,30 @@ public class AnalizadorSemantico {
             validarExpresion(t.getSiFalso());
         } else if (expr instanceof Asignacion) {
             Asignacion a = (Asignacion) expr;
-            if (!tabla.existe(a.getNombre())) {
+            // ambiente.campo = valor → válido dentro de objeto, no buscar en tabla
+            if (!a.getNombre().startsWith("ambiente.") && !tabla.existe(a.getNombre())) {
                 errores.add("Error: Variable '" + a.getNombre() + "' no declarada");
             }
             validarExpresion(a.getValor());
+
+        } else if (expr instanceof ExpresionNuevo) {
+            ExpresionNuevo nuevo = (ExpresionNuevo) expr;
+            for (Expresion arg : nuevo.getArgumentos()) {
+                validarExpresion(arg);
+            }
+        } else if (expr instanceof ExpresionAmbiente) {
+            // ambiente.campo — válido dentro de objeto
+        } else if (expr instanceof LiteralLista) {
+            LiteralLista lista = (LiteralLista) expr;
+            for (Expresion elemento : lista.getElementos()) {
+                validarExpresion(elemento);
+            }
+        } else if (expr instanceof AccesoLista) {
+            AccesoLista acceso = (AccesoLista) expr;
+            validarExpresion(acceso.getLista());
+            validarExpresion(acceso.getIndice());
         }
-        // LiteralNumero y LiteralString no necesitan validación
+
     }
 
     private void validarVariable(Variable variable) {
@@ -190,7 +340,8 @@ public class AnalizadorSemantico {
             case "entero":  return TipoDato.ENTERO;
             case "numero":  return TipoDato.NUMERO;
             case "texto":   return TipoDato.TEXTO;
-            default:        return TipoDato.DESCONOCIDO;
+            case "log":     return TipoDato.LOG;
+            default:        return TipoDato.OBJETO;
         }
     }
 

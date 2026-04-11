@@ -1,0 +1,5 @@
+vacio mostrar_mensaje(texto mensaje) {
+    consola.mostrar(mensaje)
+}
+
+mostrar_mensaje("Hola desde Quetzal")

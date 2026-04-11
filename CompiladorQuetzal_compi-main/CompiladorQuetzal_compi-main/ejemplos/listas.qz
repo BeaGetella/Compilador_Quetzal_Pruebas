@@ -1,0 +1,44 @@
+lista<entero> numeros = [10, 20, 30, 40, 50]
+lista<texto> nombres = ["Ana", "Carlos", "Maria", "Luis"]
+lista<entero> var edades = [25, 30, 22, 28]
+
+consola.mostrar("=== Info de listas ===")
+entero tam = numeros.longitud()
+entero prim = numeros.primero()
+entero ult = numeros.ultimo()
+entero suma = numeros.sumar()
+consola.mostrar(t"longitud numeros: {tam}")
+consola.mostrar(t"primero: {prim}")
+consola.mostrar(t"ultimo: {ult}")
+consola.mostrar(t"suma: {suma}")
+
+consola.mostrar("=== Recorrido con para-en ===")
+para (entero var n en numeros) {
+    consola.mostrar(t"numero: {n}")
+}
+
+consola.mostrar("=== Acceso por indice ===")
+entero primero = numeros[0]
+entero tercero = numeros[2]
+consola.mostrar(t"indice 0: {primero}")
+consola.mostrar(t"indice 2: {tercero}")
+
+consola.mostrar("=== Agregar elemento ===")
+edades.agregar(35)
+entero tamEdades = edades.longitud()
+consola.mostrar(t"longitud despues de agregar: {tamEdades}")
+
+consola.mostrar("=== Condicional con lista ===")
+entero longLista = numeros.longitud()
+si (longLista > 3) {
+    consola.mostrar("la lista tiene mas de 3 elementos")
+} sino {
+    consola.mostrar("la lista tiene 3 o menos elementos")
+}
+
+consola.mostrar("=== Suma con para-en ===")
+entero var total = 0
+para (entero var n en edades) {
+    total += n
+}
+consola.mostrar(t"total edades: {total}")

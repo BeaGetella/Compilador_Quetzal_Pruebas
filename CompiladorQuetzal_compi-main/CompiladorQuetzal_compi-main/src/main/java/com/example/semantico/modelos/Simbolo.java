@@ -39,6 +39,10 @@ public class Simbolo {
         return indice;
     }
 
+    public void setIndice(int indice) {
+        this.indice = indice;
+    }
+
     @Override
     public String toString() {
         return "Simbolo{" +

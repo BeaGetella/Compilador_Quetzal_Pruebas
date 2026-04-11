@@ -64,9 +64,20 @@ public class Parser {
         return new Programa(instrucciones);
     }
 
-    // Parsear una instrucción
     private Nodo parsearInstruccion() {
-        // Declaración de variable
+
+        // 1. Declaración de función: vacio/entero/numero/texto + IDENTIFICADOR + (
+        if ((verificar(TipoToken.TIPO_VACIO)  ||
+                verificar(TipoToken.TIPO_ENTERO) ||
+                verificar(TipoToken.TIPO_NUMERO) ||
+                verificar(TipoToken.TIPO_TEXTO)  ||
+                verificar(TipoToken.TIPO_LOG)) && esFuncion()) {
+            String tipoRetorno = tokenActual.getValor();
+            avanzar();
+            return parsearFuncion(tipoRetorno);
+        }
+
+        // 2. Declaración de variable con tipo primitivo
         if (verificar(TipoToken.TIPO_ENTERO) ||
                 verificar(TipoToken.TIPO_NUMERO) ||
                 verificar(TipoToken.TIPO_TEXTO)  ||
@@ -77,14 +88,35 @@ public class Parser {
             return parsearDeclaracionVariable();
         }
 
-        // Llamada a consola
+        // 3. Declaración de variable de tipo objeto: Usuario persona = nuevo Usuario(...)
+        if (verificar(TipoToken.IDENTIFICADOR) && esDeclaracionObjeto()) {
+            return parsearDeclaracionVariableObjeto();
+        }
+
+        // 4. Expresión suelta: llamada a función, asignación, incremento, etc.
+        if (verificar(TipoToken.IDENTIFICADOR)) {
+            Expresion expr = parsearExpresion();
+            return new InstruccionExpresion(expr);
+        }
+
+        // 5. Definición de objeto
+        if (verificar(TipoToken.OBJETO)) {
+            return parsearObjeto();
+        }
+
+        // 6. retornar
+        if (verificar(TipoToken.RETORNAR)) {
+            return parsearRetornar();
+        }
+
+        // 7. Llamada a consola
         if (verificar(TipoToken.CONSOLA)) {
             return parsearLlamadaConsola();
         }
 
-        // ── BUCLE PARA ──────────────────────────────────────────────────────
+        // 8. Bucles y control de flujo
         if (verificar(TipoToken.PARA)) {
-            return parsearBuclePara();
+            return parsearPara();
         }
 
         if (verificar(TipoToken.SI)) {
@@ -107,36 +139,150 @@ public class Parser {
             return parsearHacerMientras();
         }
 
-        // Palabras reservadas reconocidas pero aún sin implementación
-        if (
-                verificar(TipoToken.RETORNAR)    ||
-                        verificar(TipoToken.OBJETO)      ||
-                        verificar(TipoToken.NUEVO)       ||
-                        verificar(TipoToken.INTENTAR)    ||
-                        verificar(TipoToken.IMPORTAR)    ||
-                        verificar(TipoToken.EXPORTAR)    ||
-                        verificar(TipoToken.PUBLICO)     ||
-                        verificar(TipoToken.PRIVADO)     ||
-                        verificar(TipoToken.LIBRE)       ||
-                        verificar(TipoToken.ASINCRONO)) {
+        // 9. ambiente.campo = valor
+        if (verificar(TipoToken.AMBIENTE)) {
+            Expresion expr = parsearExpresion();
+            return new InstruccionExpresion(expr);
+        }
+
+        // 10. Palabras reservadas aún sin implementación
+        if (verificar(TipoToken.NUEVO)     ||
+                verificar(TipoToken.INTENTAR)  ||
+                verificar(TipoToken.IMPORTAR)  ||
+                verificar(TipoToken.EXPORTAR)  ||
+                verificar(TipoToken.PUBLICO)   ||
+                verificar(TipoToken.PRIVADO)   ||
+                verificar(TipoToken.LIBRE)     ||
+                verificar(TipoToken.ASINCRONO)) {
             throw new RuntimeException(
                     "'" + tokenActual.getValor() + "' aún no está implementado " +
                             "(línea " + tokenActual.getLinea() + ")"
             );
         }
 
-        if (verificar(TipoToken.IDENTIFICADOR)) {
-            return parsearExpresion();
-        }
-
         throw new RuntimeException("Instrucción no reconocida: '" +
                 tokenActual.getValor() + "' en línea " + tokenActual.getLinea());
     }
+
+    private boolean esDeclaracionObjeto() {
+        int pos = posicion + 1;
+        while (pos < tokens.size() && tokens.get(pos).getTipo() == TipoToken.NUEVA_LINEA) {
+            pos++;
+        }
+        if (pos < tokens.size() && tokens.get(pos).getTipo() == TipoToken.IDENTIFICADOR) {
+            int pos2 = pos + 1;
+            while (pos2 < tokens.size() && tokens.get(pos2).getTipo() == TipoToken.NUEVA_LINEA) {
+                pos2++;
+            }
+            if (pos2 < tokens.size() && tokens.get(pos2).getTipo() == TipoToken.IGUAL) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private DeclaracionVariable parsearDeclaracionVariableObjeto() {
+        String tipo = tokenActual.getValor();
+        avanzar();
+        String nombre = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre de variable").getValor();
+        consumir(TipoToken.IGUAL, "Se esperaba '='");
+        Expresion valor = parsearExpresion();
+        return new DeclaracionVariable(tipo, nombre, valor);
+    }
+
+    private boolean esFuncion() {
+        // Saltar posibles NUEVA_LINEA entre el tipo y el nombre
+        int pos = posicion + 1;
+        while (pos < tokens.size() && tokens.get(pos).getTipo() == TipoToken.NUEVA_LINEA) {
+            pos++;
+        }
+        if (pos < tokens.size() && tokens.get(pos).getTipo() == TipoToken.IDENTIFICADOR) {
+            int pos2 = pos + 1;
+            // También saltar NUEVA_LINEA entre nombre y (
+            while (pos2 < tokens.size() && tokens.get(pos2).getTipo() == TipoToken.NUEVA_LINEA) {
+                pos2++;
+            }
+            if (pos2 < tokens.size() && tokens.get(pos2).getTipo() == TipoToken.PARENTESIS_IZQ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 
     // ════════════════════════════════════════════════════════════════
     //  BUCLE PARA
     //  Sintaxis: para (entero var i = 0; i < 5; i++) { ... }
     // ════════════════════════════════════════════════════════════════
+
+    private Nodo parsearPara() {
+        consumir(TipoToken.PARA, "Se esperaba 'para'");
+        consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+
+        // Detectar si es para-en: tipo [var] nombre EN|CADA iterable
+        if (esBucleParaEn()) {
+            return parsearParaEnCuerpo();
+        }
+
+        // Si no, es para clásico — delegar al método existente sin consumir PARA y (
+        return parsearParaClasicoCuerpo();
+    }
+
+    private boolean esBucleParaEn() {
+        int pos = posicion;
+        // saltar tipo
+        if (pos >= tokens.size()) return false;
+        pos++;
+        // saltar var opcional
+        if (pos < tokens.size() && tokens.get(pos).getTipo() == TipoToken.VAR) pos++;
+        // saltar nombre
+        if (pos >= tokens.size()) return false;
+        pos++;
+        // verificar EN o CADA
+        if (pos < tokens.size()) {
+            TipoToken tipo = tokens.get(pos).getTipo();
+            return tipo == TipoToken.EN || tipo == TipoToken.CADA;
+        }
+        return false;
+    }
+
+    private NodoParaEn parsearParaEnCuerpo() {
+        // tipo
+        String tipo = tokenActual.getValor();
+        avanzar();
+        // var opcional
+        if (verificar(TipoToken.VAR)) avanzar();
+        // nombre
+        String nombre = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre de variable").getValor();
+        // en o cada
+        if (verificar(TipoToken.EN) || verificar(TipoToken.CADA)) avanzar();
+        // iterable
+        Expresion iterable = parsearExpresion();
+        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+        saltarNuevasLineas();
+        List<Nodo> cuerpo = parsearBloque();
+        return new NodoParaEn(tipo, nombre, iterable, cuerpo);
+    }
+
+    private BuclePara parsearParaClasicoCuerpo() {
+        // ya consumimos PARA y ( en parsearPara()
+        // aquí va directo a la inicialización
+        DeclaracionVariable inicializacion = parsearDeclaracionVariableInterna();
+        saltarNuevasLineas();
+        consumir(TipoToken.PUNTO_COMA, "Se esperaba ';'");
+        saltarNuevasLineas();
+        Expresion condicion = parsearExpresion();
+        saltarNuevasLineas();
+        consumir(TipoToken.PUNTO_COMA, "Se esperaba ';'");
+        saltarNuevasLineas();
+        Expresion incremento = parsearExpresion();
+        saltarNuevasLineas();
+        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+        List<Nodo> cuerpo = parsearBloque();
+        return new BuclePara(inicializacion, condicion, incremento, cuerpo);
+    }
+
     private BuclePara parsearBuclePara() {
         consumir(TipoToken.PARA, "Se esperaba 'para'");
         consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '(' después de 'para'");
@@ -248,24 +394,34 @@ public class Parser {
 
         String tipo = tipoToken.getValor();
 
-        // Consumir 'var' opcional (indica variable mutable)
+        // Manejar tipo genérico: lista<entero>, lista<texto>, etc.  ← AQUÍ, antes del var y nombre
+        if (tipo.equals("lista") && verificar(TipoToken.MENOR)) {
+            avanzar(); // consumir
+            String tipoInterno = tokenActual.getValor();
+            avanzar(); // consumir el tipo interno
+            consumir(TipoToken.MAYOR, "Se esperaba '>'");
+            tipo = "lista<" + tipoInterno + ">";
+        }
+
+        // Consumir 'var' opcional
         boolean esMutable = false;
         if (verificar(TipoToken.VAR)) {
             esMutable = true;
             avanzar();
         }
 
-        // Consumir el nombre de la variable
+        // Consumir nombre
         Token nombreToken = consumir(TipoToken.IDENTIFICADOR, "Se esperaba un nombre de variable");
         String nombre = nombreToken.getValor();
 
+        // Consumir '='
         consumir(TipoToken.IGUAL, "Se esperaba '='");
 
+        // Parsear valor
         Expresion valor = parsearExpresion();
 
         return new DeclaracionVariable(tipo, nombre, valor);
     }
-
     private LlamadaFuncion parsearLlamadaConsola() {
         consumir(TipoToken.CONSOLA, "Se esperaba 'consola'");
         consumir(TipoToken.PUNTO, "Se esperaba '.'");
@@ -311,6 +467,8 @@ public class Parser {
             return parsearInterpolacion(template);
         }
 
+
+
         if (verificar(TipoToken.IDENTIFICADOR)) {
             String nombre = tokenActual.getValor();
             avanzar();
@@ -342,8 +500,30 @@ public class Parser {
                     consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
                     return new ConversionNumero(new Variable(nombre));
                 } else {
-                    throw new RuntimeException("Método desconocido: " + nombreMetodo + " en línea " + tokenActual.getLinea());
+                    // ← CAMBIO: llamada a método de objeto: persona.obtener_nombre()
+                    List<Expresion> args = new ArrayList<>();
+                    if (verificar(TipoToken.PARENTESIS_IZQ)) {
+                        avanzar();
+                        while (!verificar(TipoToken.PARENTESIS_DER)) {
+                            args.add(parsearExpresion());
+                            if (verificar(TipoToken.COMA)) avanzar();
+                        }
+                        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                    }
+                    return new LlamadaFuncion(nombre, nombreMetodo, args);
                 }
+            }
+
+            // Llamada a función sin objeto: saludar(...)
+            if (verificar(TipoToken.PARENTESIS_IZQ)) {
+                avanzar();
+                List<Expresion> args = new ArrayList<>();
+                while (!verificar(TipoToken.PARENTESIS_DER)) {
+                    args.add(parsearExpresion());
+                    if (verificar(TipoToken.COMA)) avanzar();
+                }
+                consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                return new LlamadaFuncion(nombre, nombre, args);
             }
 
             return new Variable(nombre);
@@ -519,6 +699,55 @@ public class Parser {
     }
 
     private Expresion parsearExpresionPrimaria() {
+
+        if (verificar(TipoToken.NUEVO)) {
+            avanzar();
+            String tipoObjeto = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre del objeto").getValor();
+            consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+            List<Expresion> argumentos = new ArrayList<>();
+            while (!verificar(TipoToken.PARENTESIS_DER)) {
+                argumentos.add(parsearExpresion());
+                if (verificar(TipoToken.COMA)) avanzar();
+            }
+            consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+            return new ExpresionNuevo(tipoObjeto, argumentos);
+        }
+
+        if (verificar(TipoToken.CORCHETE_IZQ)) {
+            avanzar();
+            List<Expresion> elementos = new ArrayList<>();
+            while (!verificar(TipoToken.CORCHETE_DER) && !verificar(TipoToken.EOF)) {
+                elementos.add(parsearExpresion());
+                if (verificar(TipoToken.COMA)) avanzar();
+            }
+            consumir(TipoToken.CORCHETE_DER, "Se esperaba ']'");
+            return new LiteralLista(elementos, null);
+        }
+
+        if (verificar(TipoToken.AMBIENTE)) {
+            avanzar();
+            consumir(TipoToken.PUNTO, "Se esperaba '.'");
+            String campo = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre del campo").getValor();
+            if (verificar(TipoToken.IGUAL)) {
+                avanzar();
+                Expresion valor = parsearExpresion();
+                return new Asignacion("ambiente." + campo, "=", valor);
+            }
+            return new ExpresionAmbiente(campo);
+        }
+
+        if (verificar(TipoToken.LITERAL_STRING)) {
+            String valor = tokenActual.getValor();
+            avanzar();
+            return new LiteralString(valor);
+        }
+
+        if (verificar(TipoToken.STRING_INTERPOLADO)) {
+            String template = tokenActual.getValor();
+            avanzar();
+            return parsearInterpolacion(template);
+        }
+
         if (verificar(TipoToken.LITERAL_NUMERO)) {
             int valor = Integer.parseInt(tokenActual.getValor());
             avanzar();
@@ -529,19 +758,37 @@ public class Parser {
             String nombre = tokenActual.getValor();
             avanzar();
 
+            // Llamada a función de usuario
+            if (verificar(TipoToken.PARENTESIS_IZQ)) {
+                avanzar();
+                List<Expresion> argumentos = new ArrayList<>();
+                while (!verificar(TipoToken.PARENTESIS_DER)) {
+                    argumentos.add(parsearExpresion());
+                    if (verificar(TipoToken.COMA)) avanzar();
+                }
+                consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                return new LlamadaFuncion("", nombre, argumentos);
+            }
+
+            // Acceso por índice: lista[0]  ← NUEVO
+            if (verificar(TipoToken.CORCHETE_IZQ)) {
+                avanzar();
+                Expresion indice = parsearExpresion();
+                consumir(TipoToken.CORCHETE_DER, "Se esperaba ']'");
+                return new AccesoLista(new Variable(nombre), indice);
+            }
+
+            // Conversión o método de objeto: variable.texto(), persona.obtener_nombre()
             if (verificar(TipoToken.PUNTO)) {
                 avanzar();
-
                 String nombreMetodo;
                 if (verificar(TipoToken.IDENTIFICADOR)) {
                     nombreMetodo = tokenActual.getValor();
                     avanzar();
                 } else if (verificar(TipoToken.TIPO_TEXTO)) {
-                    nombreMetodo = "texto";
-                    avanzar();
+                    nombreMetodo = "texto"; avanzar();
                 } else if (verificar(TipoToken.TIPO_NUMERO)) {
-                    nombreMetodo = "numero";
-                    avanzar();
+                    nombreMetodo = "numero"; avanzar();
                 } else {
                     throw new RuntimeException("Se esperaba nombre de método en línea " + tokenActual.getLinea());
                 }
@@ -554,6 +801,17 @@ public class Parser {
                     consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
                     consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
                     return new ConversionNumero(new Variable(nombre));
+                } else {
+                    List<Expresion> args = new ArrayList<>();
+                    if (verificar(TipoToken.PARENTESIS_IZQ)) {
+                        avanzar();
+                        while (!verificar(TipoToken.PARENTESIS_DER)) {
+                            args.add(parsearExpresion());
+                            if (verificar(TipoToken.COMA)) avanzar();
+                        }
+                        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                    }
+                    return new LlamadaFuncion(nombre, nombreMetodo, args);
                 }
             }
 
@@ -569,6 +827,16 @@ public class Parser {
             Expresion expresion = parsearExpresion();
             consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
             return expresion;
+        }
+
+        if (verificar(TipoToken.VERDADERO)) {
+            avanzar();
+            return new LiteralNumero(1);
+        }
+
+        if (verificar(TipoToken.FALSO)) {
+            avanzar();
+            return new LiteralNumero(0);
         }
 
         throw new RuntimeException("Expresión no válida en línea " + tokenActual.getLinea());
@@ -698,4 +966,207 @@ public class Parser {
 
         return new NodoHacerMientras(cuerpo, condicion);
     }
+
+    private NodoFuncion parsearFuncion(String tipoRetorno) {
+        Token nombreToken = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre de función");
+        String nombre = nombreToken.getValor();
+
+        consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+
+        List<String[]> parametros = new ArrayList<>();
+        while (!verificar(TipoToken.PARENTESIS_DER)) {
+            // Tipo del parámetro
+            String tipoParm = tokenActual.getValor();
+            avanzar();
+
+            // Manejar tipo genérico: lista<entero>, lista<texto>
+            if (tipoParm.equals("lista") && verificar(TipoToken.MENOR)) {
+                avanzar(); // consumir
+                String tipoInterno = tokenActual.getValor();
+                avanzar(); // consumir tipo interno
+                consumir(TipoToken.MAYOR, "Se esperaba '>'");
+                tipoParm = "lista<" + tipoInterno + ">";
+            }
+
+            // var opcional
+            if (verificar(TipoToken.VAR)) avanzar();
+
+            // Nombre del parámetro
+            Token nombreParm = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre de parámetro");
+            parametros.add(new String[]{tipoParm, nombreParm.getValor()});
+
+            if (verificar(TipoToken.COMA)) avanzar();
+        }
+
+        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+        saltarNuevasLineas();
+
+        List<Nodo> cuerpo = parsearBloque();
+
+        return new NodoFuncion(tipoRetorno, nombre, parametros, cuerpo);
+    }
+
+    private NodoRetornar parsearRetornar() {
+        consumir(TipoToken.RETORNAR, "Se esperaba 'retornar'");
+
+        // Si la siguiente línea es nueva línea o } no hay valor
+        if (verificar(TipoToken.NUEVA_LINEA) || verificar(TipoToken.LLAVE_DER)
+                || verificar(TipoToken.EOF)) {
+            return new NodoRetornar(null);
+        }
+
+        Expresion valor = parsearExpresion();
+        return new NodoRetornar(valor);
+    }
+
+    private NodoObjeto parsearObjeto() {
+        consumir(TipoToken.OBJETO, "Se esperaba 'objeto'");
+        Token nombreToken = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre del objeto");
+        String nombre = nombreToken.getValor();
+
+        consumir(TipoToken.LLAVE_IZQ, "Se esperaba '{'");
+        saltarNuevasLineas();
+
+        List<NodoAtributo> atributos = new ArrayList<>();
+        NodoConstructor constructor = null;
+        List<NodoMetodo> metodos = new ArrayList<>();
+
+        boolean esPublico = true; // por defecto publico
+
+        while (!verificar(TipoToken.LLAVE_DER) && !verificar(TipoToken.EOF)) {
+
+            // Bloque privado:
+            if (verificar(TipoToken.PRIVADO)) {
+                avanzar();
+                consumir(TipoToken.DOS_PUNTOS, "Se esperaba ':'");
+                saltarNuevasLineas();
+                esPublico = false;
+                continue;
+            }
+
+            // Bloque publico:
+            if (verificar(TipoToken.PUBLICO)) {
+                avanzar();
+                consumir(TipoToken.DOS_PUNTOS, "Se esperaba ':'");
+                saltarNuevasLineas();
+                esPublico = true;
+                continue;
+            }
+
+            // Constructor: mismo nombre que el objeto
+            if (verificar(TipoToken.IDENTIFICADOR) &&
+                    tokenActual.getValor().equals(nombre) &&
+                    tokens.get(posicion + 1).getTipo() == TipoToken.PARENTESIS_IZQ) {
+                constructor = parsearConstructor();
+                saltarNuevasLineas();
+                continue;
+            }
+
+            // Atributo o método
+            if (verificar(TipoToken.TIPO_ENTERO) || verificar(TipoToken.TIPO_TEXTO) ||
+                    verificar(TipoToken.TIPO_NUMERO) || verificar(TipoToken.TIPO_LOG) ||
+                    verificar(TipoToken.TIPO_VACIO)) {
+
+                String tipo = tokenActual.getValor();
+                avanzar();
+
+                // var opcional
+                boolean mutable = false;
+                if (verificar(TipoToken.VAR)) {
+                    mutable = true;
+                    avanzar();
+                }
+
+                Token miembroNombre = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre");
+
+                // Si sigue ( es método
+                if (verificar(TipoToken.PARENTESIS_IZQ)) {
+                    NodoMetodo metodo = parsearMetodo(tipo, miembroNombre.getValor(), esPublico);
+                    metodos.add(metodo);
+                } else {
+                    // Es atributo
+                    atributos.add(new NodoAtributo(tipo, miembroNombre.getValor(), esPublico, mutable));
+                }
+            }
+
+            saltarNuevasLineas();
+        }
+
+        consumir(TipoToken.LLAVE_DER, "Se esperaba '}'");
+        return new NodoObjeto(nombre, atributos, constructor, metodos);
+    }
+
+
+    private NodoConstructor parsearConstructor() {
+        avanzar(); // consumir nombre del constructor
+        consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+
+        List<String[]> parametros = new ArrayList<>();
+        while (!verificar(TipoToken.PARENTESIS_DER)) {
+            // Tipo del parámetro
+            String tipoParm = tokenActual.getValor();
+            avanzar();
+
+            // Manejar tipo genérico: lista<entero>, lista<texto>
+            if (tipoParm.equals("lista") && verificar(TipoToken.MENOR)) {
+                avanzar(); // consumir
+                String tipoInterno = tokenActual.getValor();
+                avanzar(); // consumir tipo interno
+                consumir(TipoToken.MAYOR, "Se esperaba '>'");
+                tipoParm = "lista<" + tipoInterno + ">";
+            }
+
+            // var opcional
+            if (verificar(TipoToken.VAR)) avanzar();
+
+            // Nombre del parámetro
+            Token nombreParm = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre de parámetro");
+            parametros.add(new String[]{tipoParm, nombreParm.getValor()});
+
+            if (verificar(TipoToken.COMA)) avanzar();
+        }
+
+        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+        saltarNuevasLineas();
+        List<Nodo> cuerpo = parsearBloque();
+        return new NodoConstructor(parametros, cuerpo);
+    }
+
+
+    private NodoMetodo parsearMetodo(String tipo, String nombre, boolean esPublico) {
+        consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+
+        List<String[]> parametros = new ArrayList<>();
+        while (!verificar(TipoToken.PARENTESIS_DER)) {
+            // Tipo del parámetro
+            String tipoParm = tokenActual.getValor();
+            avanzar();
+
+            // Manejar tipo genérico: lista<entero>, lista<texto>
+            if (tipoParm.equals("lista") && verificar(TipoToken.MENOR)) {
+                avanzar(); // consumir
+                String tipoInterno = tokenActual.getValor();
+                avanzar(); // consumir tipo interno
+                consumir(TipoToken.MAYOR, "Se esperaba '>'");
+                tipoParm = "lista<" + tipoInterno + ">";
+            }
+
+            // var opcional
+            if (verificar(TipoToken.VAR)) avanzar();
+
+            // Nombre del parámetro
+            Token nombreParm = consumir(TipoToken.IDENTIFICADOR, "Se esperaba nombre de parámetro");
+            parametros.add(new String[]{tipoParm, nombreParm.getValor()});
+
+            if (verificar(TipoToken.COMA)) avanzar();
+        }
+
+        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+        saltarNuevasLineas();
+        List<Nodo> cuerpo = parsearBloque();
+        return new NodoMetodo(tipo, nombre, parametros, cuerpo, esPublico);
+    }
+
+
+
 }

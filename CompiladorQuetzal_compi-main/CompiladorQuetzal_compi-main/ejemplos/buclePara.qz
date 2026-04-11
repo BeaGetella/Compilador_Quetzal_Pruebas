@@ -1,0 +1,3 @@
+para (entero var i = 0; i < 5; i++) {
+    consola.mostrar("Bucle para, iteración: " + i.texto())
+}

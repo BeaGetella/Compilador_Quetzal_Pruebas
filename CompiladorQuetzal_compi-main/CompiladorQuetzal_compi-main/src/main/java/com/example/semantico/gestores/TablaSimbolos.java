@@ -5,13 +5,25 @@ import com.example.semantico.enums.TipoSimbolo;
 import com.example.semantico.modelos.Scope;
 import com.example.semantico.modelos.Simbolo;
 
+import java.util.Map;
+
 public class TablaSimbolos {
     private Scope scopeActual;
     private int contadorIndices;
+    private Map<String, String> tiposObjeto = new java.util.HashMap<>();
 
     public TablaSimbolos() {
         this.scopeActual = new Scope(null);  // Scope global
         this.contadorIndices = 1;  // 0 reservado para args en main
+    }
+
+
+    public void registrarTipoObjeto(String nombreVariable, String nombreClase) {
+        tiposObjeto.put(nombreVariable, nombreClase);
+    }
+
+    public String obtenerTipoObjeto(String nombreVariable) {
+        return tiposObjeto.get(nombreVariable);
     }
 
     // Agregar variable
@@ -71,5 +83,18 @@ public class TablaSimbolos {
     // Obtener scope actual
     public Scope getScopeActual() {
         return scopeActual;
+    }
+
+
+    // Agregar parámetro de función con índice JVM explícito
+    public void agregarParametro(String nombre, TipoDato tipo, int indiceJVM) {
+        int indice = indiceJVM;
+        Simbolo simbolo = new Simbolo(nombre, tipo, TipoSimbolo.VARIABLE, 0, indice);
+        scopeActual.agregar(nombre, simbolo);
+    }
+
+    // Resetear contador para el scope de una función (variables locales empiezan después de parámetros)
+    public void resetearContador(int desde) {
+        this.contadorIndices = desde;
     }
 }
