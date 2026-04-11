@@ -1,0 +1,5 @@
+jsn persona = {
+    nombre: "Ana",
+    edad: 28
+}
+consola.mostrar(persona.nombre)

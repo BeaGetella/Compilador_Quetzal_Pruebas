@@ -1,0 +1,107 @@
+jsn formulario = {
+    id: "registro_usuario_2026",
+    titulo: "Formulario de Registro Complejo",
+    descripcion: "Captura de informacion personal, laboral y preferencias",
+    secciones: [
+        {
+            nombre: "Datos Personales",
+            campos: [
+                {
+                    id: "nombre",
+                    tipo: "texto",
+                    etiqueta: "Nombre completo",
+                    validaciones: {
+                        requerido: verdadero,
+                        longitud_minima: 3,
+                        longitud_maxima: 100
+                    }
+                },
+                {
+                    id: "fecha_nacimiento",
+                    tipo: "fecha",
+                    etiqueta: "Fecha de nacimiento",
+                    validaciones: {
+                        requerido: verdadero,
+                        formato: "YYYY-MM-DD",
+                        rango: {
+                            min: "1900-01-01",
+                            max: "2026-12-31"
+                        }
+                    }
+                },
+                {
+                    id: "genero",
+                    tipo: "seleccion",
+                    etiqueta: "Genero",
+                    opciones: ["Masculino", "Femenino", "Otro", "Prefiero no decir"],
+                    validaciones: {
+                        requerido: verdadero
+                    }
+                }
+            ]
+        },
+        {
+            nombre: "Informacion Laboral",
+            campos: [
+                {
+                    id: "empresa",
+                    tipo: "texto",
+                    etiqueta: "Nombre de la empresa",
+                    validaciones: {
+                        requerido: falso
+                    }
+                },
+                {
+                    id: "puesto",
+                    tipo: "texto",
+                    etiqueta: "Puesto de trabajo",
+                    validaciones: {
+                        requerido: falso
+                    }
+                },
+                {
+                    id: "salario",
+                    tipo: "numero",
+                    etiqueta: "Salario mensual",
+                    validaciones: {
+                        requerido: falso,
+                        min: 0,
+                        max: 100000
+                    }
+                }
+            ]
+        },
+        {
+            nombre: "Preferencias",
+            campos: [
+                {
+                    id: "suscripcion",
+                    tipo: "booleano",
+                    etiqueta: "Desea recibir noticias por correo",
+                    validaciones: {
+                        requerido: verdadero
+                    }
+                },
+                {
+                    id: "intereses",
+                    tipo: "lista",
+                    etiqueta: "Areas de interes",
+                    opciones: ["Tecnologia", "Deportes", "Arte", "Ciencia", "Viajes"],
+                    validaciones: {
+                        requerido: falso,
+                        max_selecciones: 3
+                    }
+                }
+            ]
+        }
+    ],
+    metadatos: {
+        version: "1.0",
+        creado_por: "Sistema Central",
+        fecha_creacion: "2026-04-11"
+    }
+}
+
+consola.mostrar(formulario.id)
+consola.mostrar(formulario.titulo)
+consola.mostrar(formulario.metadatos.version)
