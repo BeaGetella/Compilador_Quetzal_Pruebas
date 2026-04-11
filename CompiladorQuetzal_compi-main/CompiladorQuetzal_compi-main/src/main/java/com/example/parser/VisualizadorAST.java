@@ -1,7 +1,10 @@
 package com.example.parser;
 
 import com.example.parser.ast.*;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class VisualizadorAST {
 
@@ -240,7 +243,10 @@ public class VisualizadorAST {
 
         } else if (expr instanceof LlamadaFuncion) {
             LlamadaFuncion llamada = (LlamadaFuncion) expr;
-            System.out.println(prefijo + marcador + "LlamadaFuncion (consola." + llamada.getMetodo() + ")");
+            String nombreCompleto = (llamada.getObjeto() == null || llamada.getObjeto().isEmpty())
+                    ? llamada.getMetodo()
+                    : llamada.getObjeto() + "." + llamada.getMetodo();
+            System.out.println(prefijo + marcador + "LlamadaFuncion (" + nombreCompleto + ")");
             List<Expresion> argumentos = llamada.getArgumentos();
             for (int i = 0; i < argumentos.size(); i++) {
                 boolean esUltimoArg = (i == argumentos.size() - 1);
@@ -265,6 +271,16 @@ public class VisualizadorAST {
             System.out.println(prefijo + marcador + "Asignacion (" + a.getNombre() + " " + a.getOperador() + ")");
             if (a.getValor() != null) {
                 imprimirExpresion(a.getValor(), prefijo + nuevoPrefijo, true);
+            }
+
+        } else if (expr instanceof LiteralJsn) {
+            LiteralJsn jsn = (LiteralJsn) expr;
+            System.out.println(prefijo + marcador + "LiteralJsn");
+            List<Map.Entry<String, Expresion>> entradas = new ArrayList<>(jsn.getPropiedades().entrySet());
+            for (int i = 0; i < entradas.size(); i++) {
+                boolean esUltimaEntrada = (i == entradas.size() - 1);  // ← nombre diferente
+                System.out.println(prefijo + nuevoPrefijo + (esUltimaEntrada ? ULTIMA_RAMA : RAMA) + entradas.get(i).getKey() + ":");
+                imprimirExpresion(entradas.get(i).getValue(), prefijo + nuevoPrefijo + (esUltimaEntrada ? ESPACIO : VERTICAL), true);
             }
         }
 

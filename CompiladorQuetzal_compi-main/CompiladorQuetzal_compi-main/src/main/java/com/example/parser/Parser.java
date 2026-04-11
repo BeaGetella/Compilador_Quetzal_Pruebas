@@ -7,6 +7,7 @@ import com.example.parser.ast.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class Parser {
     private List<Token> tokens;
@@ -48,6 +49,8 @@ public class Parser {
         while (verificar(TipoToken.NUEVA_LINEA)) {
             avanzar();
         }
+
+
     }
 
     // Parsear el programa completo
@@ -467,8 +470,6 @@ public class Parser {
             return parsearInterpolacion(template);
         }
 
-
-
         if (verificar(TipoToken.IDENTIFICADOR)) {
             String nombre = tokenActual.getValor();
             avanzar();
@@ -477,7 +478,6 @@ public class Parser {
                 avanzar();
 
                 String nombreMetodo = null;
-
                 if (verificar(TipoToken.IDENTIFICADOR)) {
                     nombreMetodo = tokenActual.getValor();
                     avanzar();
@@ -499,22 +499,44 @@ public class Parser {
                     consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
                     consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
                     return new ConversionNumero(new Variable(nombre));
-                } else {
-                    // ← CAMBIO: llamada a método de objeto: persona.obtener_nombre()
+                } else if (verificar(TipoToken.PARENTESIS_IZQ)) {
                     List<Expresion> args = new ArrayList<>();
-                    if (verificar(TipoToken.PARENTESIS_IZQ)) {
-                        avanzar();
-                        while (!verificar(TipoToken.PARENTESIS_DER)) {
-                            args.add(parsearExpresion());
-                            if (verificar(TipoToken.COMA)) avanzar();
-                        }
-                        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                    avanzar();
+                    while (!verificar(TipoToken.PARENTESIS_DER)) {
+                        args.add(parsearExpresion());
+                        if (verificar(TipoToken.COMA)) avanzar();
                     }
+                    consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
                     return new LlamadaFuncion(nombre, nombreMetodo, args);
+                } else {
+                    // Acceso JSN con posible encadenado: formulario.metadatos.version
+                    Expresion resultado = new AccesoJsn(new Variable(nombre), nombreMetodo);
+                    while (verificar(TipoToken.PUNTO)) {
+                        avanzar();
+                        String siguiente;
+                        if (verificar(TipoToken.IDENTIFICADOR)) {
+                            siguiente = tokenActual.getValor();
+                            avanzar();
+                        } else {
+                            throw new RuntimeException("Se esperaba propiedad en línea " + tokenActual.getLinea());
+                        }
+                        if (verificar(TipoToken.PARENTESIS_IZQ)) {
+                            List<Expresion> args = new ArrayList<>();
+                            avanzar();
+                            while (!verificar(TipoToken.PARENTESIS_DER)) {
+                                args.add(parsearExpresion());
+                                if (verificar(TipoToken.COMA)) avanzar();
+                            }
+                            consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                            resultado = new LlamadaFuncion(nombre, siguiente, args);
+                        } else {
+                            resultado = new AccesoJsn(resultado, siguiente);
+                        }
+                    }
+                    return resultado;
                 }
             }
 
-            // Llamada a función sin objeto: saludar(...)
             if (verificar(TipoToken.PARENTESIS_IZQ)) {
                 avanzar();
                 List<Expresion> args = new ArrayList<>();
@@ -523,7 +545,7 @@ public class Parser {
                     if (verificar(TipoToken.COMA)) avanzar();
                 }
                 consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
-                return new LlamadaFuncion(nombre, nombre, args);
+                return new LlamadaFuncion("", nombre, args);
             }
 
             return new Variable(nombre);
@@ -713,15 +735,48 @@ public class Parser {
             return new ExpresionNuevo(tipoObjeto, argumentos);
         }
 
+        // Lista literal: [1, 2, 3]
         if (verificar(TipoToken.CORCHETE_IZQ)) {
             avanzar();
             List<Expresion> elementos = new ArrayList<>();
+            saltarNuevasLineas();
             while (!verificar(TipoToken.CORCHETE_DER) && !verificar(TipoToken.EOF)) {
                 elementos.add(parsearExpresion());
-                if (verificar(TipoToken.COMA)) avanzar();
+                saltarNuevasLineas();
+                if (verificar(TipoToken.COMA)) {
+                    avanzar();
+                    saltarNuevasLineas();
+                }
             }
             consumir(TipoToken.CORCHETE_DER, "Se esperaba ']'");
             return new LiteralLista(elementos, null);
+        }
+
+        // JSN literal: { clave: valor, ... }
+        if (verificar(TipoToken.LLAVE_IZQ)) {
+            avanzar();
+            Map<String, Expresion> propiedades = new java.util.LinkedHashMap<>();
+            saltarNuevasLineas();
+            while (!verificar(TipoToken.LLAVE_DER) && !verificar(TipoToken.EOF)) {
+                String clave;
+                if (verificar(TipoToken.LITERAL_STRING)) {
+                    clave = tokenActual.getValor();
+                    avanzar();
+                } else {
+                    clave = consumir(TipoToken.IDENTIFICADOR, "Se esperaba clave del JSN").getValor();
+                }
+                consumir(TipoToken.DOS_PUNTOS, "Se esperaba ':'");
+                saltarNuevasLineas();
+                Expresion valor = parsearExpresion();
+                propiedades.put(clave, valor);
+                saltarNuevasLineas();
+                if (verificar(TipoToken.COMA)) {
+                    avanzar();
+                    saltarNuevasLineas();
+                }
+            }
+            consumir(TipoToken.LLAVE_DER, "Se esperaba '}'");
+            return new LiteralJsn(propiedades);
         }
 
         if (verificar(TipoToken.AMBIENTE)) {
@@ -758,7 +813,6 @@ public class Parser {
             String nombre = tokenActual.getValor();
             avanzar();
 
-            // Llamada a función de usuario
             if (verificar(TipoToken.PARENTESIS_IZQ)) {
                 avanzar();
                 List<Expresion> argumentos = new ArrayList<>();
@@ -770,7 +824,6 @@ public class Parser {
                 return new LlamadaFuncion("", nombre, argumentos);
             }
 
-            // Acceso por índice: lista[0]  ← NUEVO
             if (verificar(TipoToken.CORCHETE_IZQ)) {
                 avanzar();
                 Expresion indice = parsearExpresion();
@@ -778,7 +831,6 @@ public class Parser {
                 return new AccesoLista(new Variable(nombre), indice);
             }
 
-            // Conversión o método de objeto: variable.texto(), persona.obtener_nombre()
             if (verificar(TipoToken.PUNTO)) {
                 avanzar();
                 String nombreMetodo;
@@ -801,17 +853,17 @@ public class Parser {
                     consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
                     consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
                     return new ConversionNumero(new Variable(nombre));
-                } else {
+                } else if (verificar(TipoToken.PARENTESIS_IZQ)) {
                     List<Expresion> args = new ArrayList<>();
-                    if (verificar(TipoToken.PARENTESIS_IZQ)) {
-                        avanzar();
-                        while (!verificar(TipoToken.PARENTESIS_DER)) {
-                            args.add(parsearExpresion());
-                            if (verificar(TipoToken.COMA)) avanzar();
-                        }
-                        consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                    avanzar();
+                    while (!verificar(TipoToken.PARENTESIS_DER)) {
+                        args.add(parsearExpresion());
+                        if (verificar(TipoToken.COMA)) avanzar();
                     }
+                    consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
                     return new LlamadaFuncion(nombre, nombreMetodo, args);
+                } else {
+                    return new AccesoJsn(new Variable(nombre), nombreMetodo);
                 }
             }
 
