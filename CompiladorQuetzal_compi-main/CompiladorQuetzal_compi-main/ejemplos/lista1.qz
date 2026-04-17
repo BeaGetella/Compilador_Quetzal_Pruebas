@@ -1,0 +1,9 @@
+lista<entero> var nums = [3, 1, 4, 1, 5, 9, 2, 6]
+entero max = nums.maximo()
+entero min = nums.minimo()
+entero prom = nums.promedio()
+consola.mostrar(t"maximo: {max}")
+consola.mostrar(t"minimo: {min}")
+consola.mostrar(t"promedio: {prom}")
+nums.ordenar()
+consola.mostrar(t"longitud: {nums.longitud()}")

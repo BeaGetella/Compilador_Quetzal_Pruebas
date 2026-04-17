@@ -1,0 +1,7 @@
+// prueba_minima.qz
+lista<entero> var nums = [3, 1, 4]
+consola.mostrar(nums.longitud())
+
+
+lista<entero> var nums1 = [10, 20]
+consola.mostrar(t"Valores: {nums1.texto()}")

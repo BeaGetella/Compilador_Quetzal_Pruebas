@@ -43,6 +43,18 @@ public class Simbolo {
         this.indice = indice;
     }
 
+    // Nuevo campo
+    private String tipoDeclarado;
+
+    // En el constructor existente, agrega el parámetro o un setter:
+    public void setTipoDeclarado(String tipoDeclarado) {
+        this.tipoDeclarado = tipoDeclarado;
+    }
+
+    public String getTipoDeclarado() {
+        return tipoDeclarado != null ? tipoDeclarado : "";
+    }
+
     @Override
     public String toString() {
         return "Simbolo{" +

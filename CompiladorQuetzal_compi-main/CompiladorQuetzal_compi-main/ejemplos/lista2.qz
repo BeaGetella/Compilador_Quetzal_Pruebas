@@ -1,0 +1,104 @@
+// ============================================
+// TEST COMPLETO - Métodos de Lista en Quetzal
+// ============================================
+
+// --- Información básica ---
+lista<entero> var nums = [3, 1, 4, 1, 5, 9, 2, 6, 5]
+
+consola.mostrar("=== INFORMACIÓN BÁSICA ===")
+consola.mostrar(t"Lista inicial: {nums.texto()}")
+consola.mostrar(t"Longitud: {nums.longitud()}")           // 9
+consola.mostrar(t"¿Está vacía?: {nums.esta_vacia()}")     // falso
+consola.mostrar(t"¿Contiene 5?: {nums.contiene(5)}")      // verdadero
+consola.mostrar(t"¿Contiene 7?: {nums.contiene(7)}")      // falso
+
+// --- Agregar y remover ---
+consola.mostrar("=== AGREGAR Y REMOVER ===")
+nums.agregar(99)
+consola.mostrar(t"Después de agregar(99): {nums.texto()}")
+
+nums.insertar(2, 77)
+consola.mostrar(t"Después de insertar(2, 77): {nums.texto()}")
+
+nums.remover(1)
+consola.mostrar(t"Después de remover(1) [primera ocurrencia]: {nums.texto()}")
+
+entero removido = nums.quitar_en(0)
+consola.mostrar(t"quitar_en(0) devolvió: {removido}")
+consola.mostrar(t"Lista tras quitar_en(0): {nums.texto()}")
+
+// --- Búsqueda ---
+consola.mostrar("=== BÚSQUEDA ===")
+lista<texto> var letras = ["a", "b", "a", "c", "a"]
+consola.mostrar(t"Lista: {letras.texto()}")
+consola.mostrar(t"buscar('a'): {letras.buscar('a')}")           // 0
+consola.mostrar(t"buscar_ultimo('a'): {letras.buscar_ultimo('a')}") // 4
+consola.mostrar(t"contar('a'): {letras.contar('a')}")           // 3
+consola.mostrar(t"buscar('z'): {letras.buscar('z')}")           // -1
+
+// --- Ordenación ---
+consola.mostrar("=== ORDENACIÓN ===")
+lista<entero> var orden = [5, 3, 8, 1, 9, 2]
+consola.mostrar(t"Original: {orden.texto()}")
+
+lista<entero> copia_ord = orden.ordenado()
+consola.mostrar(t"ordenado() sin modificar: {copia_ord.texto()}")
+consola.mostrar(t"Original intacto: {orden.texto()}")
+
+orden.ordenar()
+consola.mostrar(t"Después de ordenar(): {orden.texto()}")
+
+orden.ordenar_descendente()
+consola.mostrar(t"Después de ordenar_descendente(): {orden.texto()}")
+
+orden.invertir()
+consola.mostrar(t"Después de invertir(): {orden.texto()}")
+
+// // --- Extracción ---
+consola.mostrar("=== EXTRACCIÓN ===")
+lista<texto> frutas = ["manzana", "banana", "cereza", "durazno", "uva"]
+consola.mostrar(t"Lista: {frutas.texto()}")
+consola.mostrar(t"primero(): {frutas.primero()}")       // manzana
+// consola.mostrar(t"ultimo(): {frutas.ultimo()}")         // uva
+// consola.mostrar(t"tomar(2): {frutas.tomar(2).texto()}") // [manzana, banana]
+// consola.mostrar(t"saltar(3): {frutas.saltar(3).texto()}") // [durazno, uva]
+// consola.mostrar(t"sublista(1, 4): {frutas.sublista(1, 4).texto()}") // [banana, cereza, durazno]
+
+// --- Operaciones numéricas ---
+consola.mostrar("=== OPERACIONES NUMÉRICAS ===")
+lista<entero> calculos = [1, 2, 3, 4, 5]
+consola.mostrar(t"Lista: {calculos.texto()}")
+consola.mostrar(t"sumar(): {calculos.sumar()}")         // 15
+consola.mostrar(t"promedio(): {calculos.promedio()}")   // 3.0
+consola.mostrar(t"maximo(): {calculos.maximo()}")       // 5
+consola.mostrar(t"minimo(): {calculos.minimo()}")       // 1
+
+// --- Combinación ---
+consola.mostrar("=== COMBINACIÓN ===")
+lista<texto> lista1 = ["A", "B"]
+lista<texto> var lista2 = ["C", "D"]
+lista<texto> combinada = lista1.concatenar(lista2)
+consola.mostrar(t"concatenar: {combinada.texto()}")     // [A, B, C, D]
+
+lista2.extender(lista1)
+consola.mostrar(t"extender: {lista2.texto()}")          // [C, D, A, B]
+
+lista<texto> palabras = ["Hola", "Mundo", "Quetzal"]
+consola.mostrar(t"unir(' '): {palabras.unir(' ')}")     // Hola Mundo Quetzal
+
+// --- Conversión ---
+consola.mostrar("=== CONVERSIÓN ===")
+lista<texto> conv = ["manzana", "banana"]
+consola.mostrar(t"texto(): {conv.texto()}")
+consola.mostrar(t"json(): {conv.json()}")
+consola.mostrar(t"logico(): {conv.logico()}")           // verdadero
+
+lista<entero> vacia = []
+consola.mostrar(t"logico() lista vacía: {vacia.logico()}") // falso
+
+// --- limpiar() al final ---
+consola.mostrar("=== LIMPIAR ===")
+lista<entero> var para_limpiar = [1, 2, 3]
+para_limpiar.limpiar()
+consola.mostrar(t"Después de limpiar(): {para_limpiar.texto()}")
+consola.mostrar(t"¿Vacía ahora?: {para_limpiar.esta_vacia()}")  // verdadero

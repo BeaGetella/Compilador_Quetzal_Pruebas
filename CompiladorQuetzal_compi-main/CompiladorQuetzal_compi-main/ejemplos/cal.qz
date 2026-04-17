@@ -4,7 +4,7 @@ numero a = entrada_a.numero()
 texto entrada_b = consola.pedir("Ingresar el segundo numero: ")
 numero b = entrada_b.numero()
 
-numero suma = c + b
+numero suma = a + b
 consola.mostrar(t"Suma: {suma}")
 
 numero resta = a - b

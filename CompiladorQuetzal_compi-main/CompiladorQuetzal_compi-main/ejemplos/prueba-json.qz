@@ -1,0 +1,42 @@
+// ============================================
+// TEST JSN - Métodos de JSON en Quetzal
+// Descomentar bloque por bloque para probar
+// ============================================
+
+// --- PARTE 1: contiene_clave ---
+jsn var persona = { nombre: "Ana", edad: 28, activo: verdadero }
+
+consola.mostrar("=== PARTE 1: contiene_clave ===")
+consola.mostrar(persona.contiene_clave("nombre"))    // verdadero
+consola.mostrar(persona.contiene_clave("email"))     // falso
+consola.mostrar(persona.contiene_clave("edad"))      // verdadero
+
+// --- PARTE 2: claves y valores ---
+consola.mostrar("=== PARTE 2: claves y valores ===")
+lista<texto> ks = persona.claves()
+consola.mostrar(t"Claves: {ks.texto()}")           // [nombre, edad, activo]
+lista vs = persona.valores()
+consola.mostrar(t"Valores: {vs.texto()}")          // [Ana, 28, verdadero]
+
+// --- PARTE 3: establecer ---
+consola.mostrar("=== PARTE 3: establecer ===")
+persona.establecer("apellido", "Gomez")
+persona.establecer("ciudad", "Guatemala")
+consola.mostrar(t"Después de establecer: {persona.texto()}")
+
+// --- PARTE 4: eliminar ---
+consola.mostrar("=== PARTE 4: eliminar ===")
+persona.eliminar("activo")
+consola.mostrar(t"Después de eliminar activo: {persona.texto()}")
+
+// --- PARTE 5: fusionar ---
+consola.mostrar("=== PARTE 5: fusionar ===")
+jsn extras = { apellido: "Gomez", edad: 30, pais: "Guatemala" }
+persona.fusionar(extras)
+consola.mostrar(t"Después de fusionar: {persona.texto()}")
+
+// --- PARTE 6: texto y texto_formateado ---
+consola.mostrar("=== PARTE 6: serialización ===")
+jsn datos = { nombre: "Luis", edad: 25 }
+consola.mostrar(datos.texto())
+consola.mostrar(datos.texto_formateado())

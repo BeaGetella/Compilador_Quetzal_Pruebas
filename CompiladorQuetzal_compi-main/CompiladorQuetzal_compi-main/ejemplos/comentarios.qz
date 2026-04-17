@@ -1,0 +1,5 @@
+// Este es un comentario
+entero a = 10 // comentario al final de línea
+entero b = 5
+// otro comentario
+consola.mostrar(t"suma: {a + b}")

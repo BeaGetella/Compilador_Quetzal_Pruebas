@@ -140,6 +140,31 @@ public class Lexer {
             avanzar(); // Saltar la comilla final "
         }
 
+        if (caracterActual == '\'') {
+            return leerStringSimple();
+        }
+
+
+
+        return new Token(TipoToken.LITERAL_STRING, string.toString(), lineaInicio);
+    }
+
+
+    private Token leerStringSimple() {
+        StringBuilder string = new StringBuilder();
+        int lineaInicio = linea;
+
+        avanzar(); // Saltar la comilla simple inicial '
+
+        while (caracterActual != '\'' && caracterActual != '\0') {
+            string.append(caracterActual);
+            avanzar();
+        }
+
+        if (caracterActual == '\'') {
+            avanzar(); // Saltar la comilla simple final '
+        }
+
         return new Token(TipoToken.LITERAL_STRING, string.toString(), lineaInicio);
     }
 
@@ -198,6 +223,10 @@ public class Lexer {
 
             if (caracterActual == '"') {
                 return leerString();
+            }
+
+            if (caracterActual == '\'') {
+                return leerStringSimple();
             }
 
             int lineaActual = linea;
@@ -316,6 +345,13 @@ public class Lexer {
                     if (caracterActual == '=') {
                         avanzar();
                         return new Token(TipoToken.DIV_IGUAL, "/=", lineaActual);
+                    }
+                    // Comentario de línea: // ...
+                    if (caracterActual == '/') {
+                        while (caracterActual != '\n' && caracterActual != '\0') {
+                            avanzar();
+                        }
+                        continue; // saltar el comentario y seguir tokenizando
                     }
                     return new Token(TipoToken.DIVISION, "/", lineaActual);
 

@@ -4,8 +4,10 @@ public enum TipoDato {
     ENTERO,
     NUMERO,
     TEXTO,
-    VOID,
+    VACIO,
     OBJETO,
     LOG,
-    DESCONOCIDO
+    DESCONOCIDO,
+    LISTA,
+    JSN
 }

@@ -254,7 +254,7 @@ public class AnalizadorSemantico {
         TipoDato tipo = convertirTipo(decl.getTipo());
 
         try {
-            tabla.agregarVariable(decl.getNombre(), tipo, 0);
+            tabla.agregarVariableConTipo(decl.getNombre(), tipo, decl.getTipo(), 0);
         } catch (RuntimeException e) {
             errores.add(e.getMessage());
             return;
@@ -336,11 +336,13 @@ public class AnalizadorSemantico {
     }
 
     private TipoDato convertirTipo(String tipo) {
-        switch (tipo.toLowerCase()) {
+        String tipoBase = tipo.contains("<") ? tipo.substring(0, tipo.indexOf("<")) : tipo;
+        switch (tipoBase.toLowerCase()) {
             case "entero":  return TipoDato.ENTERO;
             case "numero":  return TipoDato.NUMERO;
             case "texto":   return TipoDato.TEXTO;
             case "log":     return TipoDato.LOG;
+            case "lista":   return TipoDato.LISTA;
             default:        return TipoDato.OBJETO;
         }
     }

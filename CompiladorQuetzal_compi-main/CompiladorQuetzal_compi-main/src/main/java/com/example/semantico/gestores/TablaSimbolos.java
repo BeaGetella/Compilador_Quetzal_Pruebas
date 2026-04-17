@@ -41,6 +41,28 @@ public class TablaSimbolos {
         int indice = contadorIndices++;
         Simbolo simbolo = new Simbolo(nombre, tipo, TipoSimbolo.VARIABLE, linea, indice);
         scopeActual.agregar(nombre, simbolo);
+
+
+    }
+
+    public void agregarVariableConTipo(String nombre, TipoDato tipo, String tipoDeclarado, int linea) {
+        if (scopeActual.existeLocal(nombre)) {
+            Simbolo existente = scopeActual.obtener(nombre);
+            throw new RuntimeException(
+                    "Error en línea " + linea + ": Variable '" + nombre +
+                            "' ya declarada en línea " + existente.getLineaDeclaracion()
+            );
+        }
+        int indice = contadorIndices++;
+        Simbolo simbolo = new Simbolo(nombre, tipo, TipoSimbolo.VARIABLE, linea, indice);
+        simbolo.setTipoDeclarado(tipoDeclarado); // ← guardar "lista<texto>"
+        scopeActual.agregar(nombre, simbolo);
+    }
+
+    // Y este helper para consultar:
+    public String obtenerTipoDeclarado(String nombre) {
+        Simbolo simbolo = obtener(nombre);
+        return simbolo != null ? simbolo.getTipoDeclarado() : null;
     }
 
     // Verificar si existe una variable
@@ -51,6 +73,10 @@ public class TablaSimbolos {
     // Obtener símbolo
     public Simbolo obtener(String nombre) {
         return scopeActual.obtener(nombre);
+    }
+
+    public int getContadorIndices() {
+        return contadorIndices;
     }
 
     // Entrar a un nuevo scope (para funciones, if, while, etc.)
@@ -91,7 +117,13 @@ public class TablaSimbolos {
         int indice = indiceJVM;
         Simbolo simbolo = new Simbolo(nombre, tipo, TipoSimbolo.VARIABLE, 0, indice);
         scopeActual.agregar(nombre, simbolo);
+
+
     }
+
+
+
+
 
     // Resetear contador para el scope de una función (variables locales empiezan después de parámetros)
     public void resetearContador(int desde) {
