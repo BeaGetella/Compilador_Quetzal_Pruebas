@@ -557,6 +557,12 @@ public class Parser {
             return new LiteralNumero(valor);
         }
 
+        if (verificar(TipoToken.LITERAL_DECIMAL)) {
+            double valor = Double.parseDouble(tokenActual.getValor());
+            avanzar();
+            return new LiteralDecimal(valor);
+        }
+
         throw new RuntimeException("Expresión de string no válida en línea " + tokenActual.getLinea());
     }
 
@@ -807,6 +813,12 @@ public class Parser {
             int valor = Integer.parseInt(tokenActual.getValor());
             avanzar();
             return new LiteralNumero(valor);
+        }
+
+        if (verificar(TipoToken.LITERAL_DECIMAL)) {
+            double valor = Double.parseDouble(tokenActual.getValor());
+            avanzar();
+            return new LiteralDecimal(valor);
         }
 
         if (verificar(TipoToken.IDENTIFICADOR)) {

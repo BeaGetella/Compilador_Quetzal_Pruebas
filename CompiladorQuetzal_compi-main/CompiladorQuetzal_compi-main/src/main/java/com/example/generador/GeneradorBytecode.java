@@ -23,11 +23,9 @@ public class GeneradorBytecode {
     private int contadorSlots = 0;
 
 
-
     private java.util.Deque<Label> pilaEtiquetasFin = new java.util.ArrayDeque<>();
     private java.util.Deque<Label> pilaEtiquetasInicio = new java.util.ArrayDeque<>();
     private Map<String, NodoObjeto> objetos = new java.util.HashMap<>();
-
 
 
     public GeneradorBytecode(String nombreClase, TablaSimbolos tabla) {
@@ -111,8 +109,7 @@ public class GeneradorBytecode {
                 LlamadaFuncion llamada = (LlamadaFuncion) expr;
                 if (llamada.getObjeto().equals("consola")) {
                     generarLlamadaConsola(llamada);
-                }
-                else if (!llamada.getObjeto().isEmpty()
+                } else if (!llamada.getObjeto().isEmpty()
                         && !llamada.getObjeto().equals(llamada.getMetodo())
                         && (esLista(llamada.getObjeto()) || esMetodoLista(llamada.getMetodo()))) {
                     // método de lista: nums.ordenar(), nums.agregar(5), etc.
@@ -145,11 +142,9 @@ public class GeneradorBytecode {
             } else {
                 generarExpresionComoInstruccion(expr);
             }
-        }
-        else if (instruccion instanceof NodoObjeto) {
+        } else if (instruccion instanceof NodoObjeto) {
             objetos.put(((NodoObjeto) instruccion).getNombre(), (NodoObjeto) instruccion);
-        }
-        else if (instruccion instanceof NodoRetornar) {
+        } else if (instruccion instanceof NodoRetornar) {
             generarRetornar((NodoRetornar) instruccion);
 
         } else if (instruccion instanceof NodoParaEn) {
@@ -197,17 +192,71 @@ public class GeneradorBytecode {
         return tipo == TipoDato.JSN || tipo == TipoDato.OBJETO;
     }
 
+    // ══════════════════════════════════════════════════════
+    //  METODOS SOBRE PRIMITIVOS: entero.texto(), log.texto(), numero.texto()
+    // ══════════════════════════════════════════════════════
+    private boolean esPrimitivo(String nombreVariable) {
+        TipoDato t = tabla.obtenerTipo(nombreVariable);
+        return t == TipoDato.ENTERO || t == TipoDato.LOG || t == TipoDato.NUMERO;
+    }
+
+    private boolean esMetodoPrimitivo(String metodo) {
+        return metodo.equals("texto");
+    }
+
+    private TipoDato tipoRetornoMetodoPrimitivo(String metodo) {
+        switch (metodo) {
+            case "texto":
+                return TipoDato.TEXTO;
+            default:
+                return null;
+        }
+    }
+
+    // Asume que llamada = var.metodo() donde var es primitivo.
+    // Deja en la pila un String.
+    private void generarMetodoPrimitivo(LlamadaFuncion llamada) {
+        String metodo = llamada.getMetodo();
+        String nombreVar = llamada.getObjeto();
+        TipoDato tipoVar = tabla.obtenerTipo(nombreVar);
+
+        // Cargar la variable (generarVariable ya usa DLOAD o ILOAD según el tipo)
+        generarVariable(new Variable(nombreVar));
+
+        switch (metodo) {
+            case "texto":
+                if (tipoVar == TipoDato.NUMERO) {
+                    // double -> String
+                    methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
+                            "valueOf", "(D)Ljava/lang/String;", false);
+                } else {
+                    // ENTERO o LOG (int) -> String
+                    methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
+                            "valueOf", "(I)Ljava/lang/String;", false);
+                }
+                break;
+            default:
+                throw new RuntimeException("Metodo primitivo no soportado: " + metodo);
+        }
+    }
+
     private TipoDato tipoRetornoMetodoJsn(String metodo) {
         switch (metodo) {
-            case "contiene_clave":  return TipoDato.LOG;     // int 0/1
-            case "claves":          return TipoDato.LISTA;   // ArrayList<String>
-            case "valores":         return TipoDato.LISTA;   // ArrayList<Object>
+            case "contiene_clave":
+                return TipoDato.LOG;     // int 0/1
+            case "claves":
+                return TipoDato.LISTA;   // ArrayList<String>
+            case "valores":
+                return TipoDato.LISTA;   // ArrayList<Object>
             case "texto":
-            case "texto_formateado": return TipoDato.TEXTO;
+            case "texto_formateado":
+                return TipoDato.TEXTO;
             case "establecer":
             case "eliminar":
-            case "fusionar":        return null;             // void
-            default:                return null;
+            case "fusionar":
+                return null;             // void
+            default:
+                return null;
         }
     }
 
@@ -314,7 +363,7 @@ public class GeneradorBytecode {
         methodVisitor.visitVarInsn(ISTORE, indice);
 
         Label labelInicio = new Label();
-        Label labelFin    = new Label();
+        Label labelFin = new Label();
 
         pilaEtiquetasInicio.push(labelInicio);
         pilaEtiquetasFin.push(labelFin);
@@ -338,12 +387,18 @@ public class GeneradorBytecode {
     private TipoDato convertirTipo(String tipo) {
         String tipoBase = tipo.contains("<") ? tipo.substring(0, tipo.indexOf("<")) : tipo;
         switch (tipoBase.toLowerCase()) {
-            case "entero":  return TipoDato.ENTERO;
-            case "numero":  return TipoDato.NUMERO;
-            case "texto":   return TipoDato.TEXTO;
-            case "log":     return TipoDato.LOG;
-            case "lista":   return TipoDato.LISTA;
-            default:        return TipoDato.OBJETO;
+            case "entero":
+                return TipoDato.ENTERO;
+            case "numero":
+                return TipoDato.NUMERO;
+            case "texto":
+                return TipoDato.TEXTO;
+            case "log":
+                return TipoDato.LOG;
+            case "lista":
+                return TipoDato.LISTA;
+            default:
+                return TipoDato.OBJETO;
         }
     }
 
@@ -480,7 +535,7 @@ public class GeneradorBytecode {
     // ════════════════════════════════════════════════════════════════
     private void generarMientras(NodoMientras nodo) {
         Label inicio = new Label();
-        Label fin    = new Label();
+        Label fin = new Label();
 
         pilaEtiquetasInicio.push(inicio);
         pilaEtiquetasFin.push(fin);
@@ -505,7 +560,7 @@ public class GeneradorBytecode {
     // ════════════════════════════════════════════════════════════════
     private void generarHacerMientras(NodoHacerMientras nodo) {
         Label inicio = new Label();
-        Label fin    = new Label();
+        Label fin = new Label();
 
         pilaEtiquetasInicio.push(inicio);
         pilaEtiquetasFin.push(fin);
@@ -542,6 +597,14 @@ public class GeneradorBytecode {
     //  DECLARACIÓN DE VARIABLE
     // ════════════════════════════════════════════════════════════════
     private void generarDeclaracionVariable(DeclaracionVariable decl) {
+        // Si la variable no está en la tabla, registrarla ahora.
+        // Esto pasa con variables LOCALES declaradas dentro de funciones,
+        // ya que el semántico solo registra las del main en la tabla pública.
+        if (!tabla.existe(decl.getNombre())) {
+            TipoDato tipoDecl = convertirTipo(decl.getTipo());
+            tabla.agregarVariableConTipo(decl.getNombre(), tipoDecl, decl.getTipo(), 0);
+        }
+
         int indiceVariable = tabla.obtenerIndice(decl.getNombre());
         generarExpresion(decl.getValor());
 
@@ -551,6 +614,8 @@ public class GeneradorBytecode {
             if (tipo == TipoDato.OBJETO) {
                 tabla.registrarTipoObjeto(decl.getNombre(), decl.getTipo());
             }
+        } else if (tipo == TipoDato.NUMERO) {
+            methodVisitor.visitVarInsn(DSTORE, indiceVariable);
         } else {
             methodVisitor.visitVarInsn(ISTORE, indiceVariable);
         }
@@ -559,6 +624,9 @@ public class GeneradorBytecode {
     private void generarExpresion(Expresion expresion) {
         if (expresion instanceof LiteralNumero) {
             generarLiteralNumero((LiteralNumero) expresion);
+
+        } else if (expresion instanceof LiteralDecimal) {
+            generarLiteralDecimal((LiteralDecimal) expresion);
 
         } else if (expresion instanceof LiteralString) {
             methodVisitor.visitLdcInsn(((LiteralString) expresion).getValor());
@@ -590,8 +658,12 @@ public class GeneradorBytecode {
             } else if (tipo == TipoDato.OBJETO) {
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
                         "valueOf", "(Ljava/lang/Object;)Ljava/lang/String;", false);
+            } else if (tipo == TipoDato.NUMERO) {
+                // NUMERO -> double -> String
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
+                        "valueOf", "(D)Ljava/lang/String;", false);
             } else {
-                // ENTERO, LOG, NUMERO -> int -> String
+                // ENTERO, LOG -> int -> String
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
                         "valueOf", "(I)Ljava/lang/String;", false);
             }
@@ -617,13 +689,18 @@ public class GeneradorBytecode {
 
             } else if (llamada.getObjeto() != null && !llamada.getObjeto().isEmpty()
                     && !llamada.getObjeto().equals(llamada.getMetodo())) {
-                if (esLista(llamada.getObjeto())) {
+                if (esPrimitivo(llamada.getObjeto()) && esMetodoPrimitivo(llamada.getMetodo())) {
+                    generarMetodoPrimitivo(llamada);
+                } else if (esLista(llamada.getObjeto())) {
                     generarMetodoLista(llamada);
                 } else if (esMetodoJsn(llamada.getMetodo())) {
                     generarMetodoJsn(llamada);
                 } else {
                     generarLlamadaMetodoObjeto(llamada);
                 }
+            } else {
+                // Función global de usuario: crear_saludo(nombre, edad), calcular_area(5.0), etc.
+                generarLlamadaFuncionUsuario(llamada);
             }
         } else if (expresion instanceof ExpresionAmbiente) {
             generarAccesoAmbiente((ExpresionAmbiente) expresion);
@@ -735,10 +812,10 @@ public class GeneradorBytecode {
 
     private void generarParaEn(NodoParaEn nodo) {
         Label inicio = new Label();
-        Label fin    = new Label();
+        Label fin = new Label();
 
         // Slots nuevos para cada bucle — siempre frescos
-        int slotLista    = contadorSlots++;
+        int slotLista = contadorSlots++;
         int slotContador = contadorSlots++;
         int slotVariable = contadorSlots++;
 
@@ -836,11 +913,12 @@ public class GeneradorBytecode {
 
         methodVisitor.visitMethodInsn(INVOKESPECIAL, expr.getTipoObjeto(), "<init>", descriptor.toString(), false);
     }
+
     private void generarAsignacion(Asignacion asignacion) {
-        String nombre   = asignacion.getNombre();
+        String nombre = asignacion.getNombre();
         String operador = asignacion.getOperador();
-        int indice      = tabla.obtenerIndice(nombre);
-        TipoDato tipo   = tabla.obtenerTipo(nombre);
+        int indice = tabla.obtenerIndice(nombre);
+        TipoDato tipo = tabla.obtenerTipo(nombre);
 
         if (operador.equals("=")) {
             generarExpresion(asignacion.getValor());
@@ -853,11 +931,21 @@ public class GeneradorBytecode {
             generarExpresion(asignacion.getValor());
 
             switch (operador) {
-                case "+=": methodVisitor.visitInsn(IADD); break;
-                case "-=": methodVisitor.visitInsn(ISUB); break;
-                case "*=": methodVisitor.visitInsn(IMUL); break;
-                case "/=": methodVisitor.visitInsn(IDIV); break;
-                case "%=": methodVisitor.visitInsn(IREM); break;
+                case "+=":
+                    methodVisitor.visitInsn(IADD);
+                    break;
+                case "-=":
+                    methodVisitor.visitInsn(ISUB);
+                    break;
+                case "*=":
+                    methodVisitor.visitInsn(IMUL);
+                    break;
+                case "/=":
+                    methodVisitor.visitInsn(IDIV);
+                    break;
+                case "%=":
+                    methodVisitor.visitInsn(IREM);
+                    break;
             }
         }
 
@@ -870,7 +958,7 @@ public class GeneradorBytecode {
 
     private void generarTernario(OperacionTernaria ternario) {
         Label siFalso = new Label();
-        Label fin     = new Label();
+        Label fin = new Label();
 
         generarExpresion(ternario.getCondicion());
         methodVisitor.visitJumpInsn(IFEQ, siFalso);
@@ -932,13 +1020,28 @@ public class GeneradorBytecode {
         }
     }
 
+    private void generarLiteralDecimal(LiteralDecimal literal) {
+        double valor = literal.getValor();
+
+        // Optimizaciones para constantes 0.0 y 1.0
+        if (valor == 0.0) {
+            methodVisitor.visitInsn(DCONST_0);
+        } else if (valor == 1.0) {
+            methodVisitor.visitInsn(DCONST_1);
+        } else {
+            methodVisitor.visitLdcInsn(valor);
+        }
+    }
+
     private void generarVariable(Variable variable) {
         String nombre = variable.getNombre();
-        int indice    = tabla.obtenerIndice(nombre);
+        int indice = tabla.obtenerIndice(nombre);
         TipoDato tipo = tabla.obtenerTipo(nombre);
 
         if (tipo == TipoDato.TEXTO || tipo == TipoDato.OBJETO || tipo == TipoDato.LISTA) {
             methodVisitor.visitVarInsn(ALOAD, indice);
+        } else if (tipo == TipoDato.NUMERO) {
+            methodVisitor.visitVarInsn(DLOAD, indice);
         } else {
             methodVisitor.visitVarInsn(ILOAD, indice);
         }
@@ -949,7 +1052,7 @@ public class GeneradorBytecode {
 
         if (operador.equals("y") || operador.equals("&&")) {
             Label falso = new Label();
-            Label fin   = new Label();
+            Label fin = new Label();
             generarExpresion(operacion.getIzquierda());
             methodVisitor.visitJumpInsn(IFEQ, falso);
             generarExpresion(operacion.getDerecha());
@@ -964,7 +1067,7 @@ public class GeneradorBytecode {
 
         if (operador.equals("o") || operador.equals("||")) {
             Label verdadero = new Label();
-            Label fin       = new Label();
+            Label fin = new Label();
             generarExpresion(operacion.getIzquierda());
             methodVisitor.visitJumpInsn(IFNE, verdadero);
             generarExpresion(operacion.getDerecha());
@@ -977,29 +1080,131 @@ public class GeneradorBytecode {
             return;
         }
 
+        // Detectar si la operación es con doubles (cualquiera de los lados es NUMERO)
+        TipoDato tipoIzq = inferirTipoCompleto(operacion.getIzquierda());
+        TipoDato tipoDer = inferirTipoCompleto(operacion.getDerecha());
+        boolean esDouble = (tipoIzq == TipoDato.NUMERO || tipoDer == TipoDato.NUMERO);
+
+// Si es '+' y cualquiera de los lados es TEXTO → concatenación con StringBuilder
+        if (operador.equals("+") && (tipoIzq == TipoDato.TEXTO || tipoDer == TipoDato.TEXTO)) {
+            // new StringBuilder()
+            methodVisitor.visitTypeInsn(NEW, "java/lang/StringBuilder");
+            methodVisitor.visitInsn(DUP);
+            methodVisitor.visitMethodInsn(INVOKESPECIAL, "java/lang/StringBuilder",
+                    "<init>", "()V", false);
+            agregarAStringBuilder(operacion.getIzquierda());
+            agregarAStringBuilder(operacion.getDerecha());
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
+                    "toString", "()Ljava/lang/String;", false);
+            return;
+        }
+
+// Generar operando izquierdo (promocionando a double si hace falta)
         generarExpresion(operacion.getIzquierda());
+        if (esDouble && tipoIzq != TipoDato.NUMERO) {
+            methodVisitor.visitInsn(I2D);
+        }
+
+        // Generar operando derecho (promocionando a double si hace falta)
         generarExpresion(operacion.getDerecha());
+        if (esDouble && tipoDer != TipoDato.NUMERO) {
+            methodVisitor.visitInsn(I2D);
+        }
 
         Label verdadero = new Label();
-        Label fin       = new Label();
+        Label fin = new Label();
 
-        switch (operador) {
-            case "+":  methodVisitor.visitInsn(IADD); return;
-            case "-":  methodVisitor.visitInsn(ISUB); return;
-            case "*":  methodVisitor.visitInsn(IMUL); return;
-            case "/":  methodVisitor.visitInsn(IDIV); return;
-            case "%":  methodVisitor.visitInsn(IREM); return;
+        // Rama aritmética con doubles
+        if (esDouble) {
+            switch (operador) {
+                case "+":
+                    methodVisitor.visitInsn(DADD);
+                    return;
+                case "-":
+                    methodVisitor.visitInsn(DSUB);
+                    return;
+                case "*":
+                    methodVisitor.visitInsn(DMUL);
+                    return;
+                case "/":
+                    methodVisitor.visitInsn(DDIV);
+                    return;
+                case "%":
+                    methodVisitor.visitInsn(DREM);
+                    return;
 
-            case ">":  methodVisitor.visitJumpInsn(IF_ICMPGT, verdadero); break;
-            case "<":  methodVisitor.visitJumpInsn(IF_ICMPLT, verdadero); break;
-            case ">=": methodVisitor.visitJumpInsn(IF_ICMPGE, verdadero); break;
-            case "<=": methodVisitor.visitJumpInsn(IF_ICMPLE, verdadero); break;
-            case "==": methodVisitor.visitJumpInsn(IF_ICMPEQ, verdadero); break;
-            case "!=": methodVisitor.visitJumpInsn(IF_ICMPNE, verdadero); break;
+                // Comparaciones de doubles: DCMPG deja -1/0/1 en pila, luego IF*
+                case ">":
+                    methodVisitor.visitInsn(DCMPG);
+                    methodVisitor.visitJumpInsn(IFGT, verdadero);
+                    break;
+                case "<":
+                    methodVisitor.visitInsn(DCMPG);
+                    methodVisitor.visitJumpInsn(IFLT, verdadero);
+                    break;
+                case ">=":
+                    methodVisitor.visitInsn(DCMPG);
+                    methodVisitor.visitJumpInsn(IFGE, verdadero);
+                    break;
+                case "<=":
+                    methodVisitor.visitInsn(DCMPG);
+                    methodVisitor.visitJumpInsn(IFLE, verdadero);
+                    break;
+                case "==":
+                    methodVisitor.visitInsn(DCMPG);
+                    methodVisitor.visitJumpInsn(IFEQ, verdadero);
+                    break;
+                case "!=":
+                    methodVisitor.visitInsn(DCMPG);
+                    methodVisitor.visitJumpInsn(IFNE, verdadero);
+                    break;
 
-            default:
-                throw new RuntimeException("Operador no soportado: " + operador);
+                default:
+                    throw new RuntimeException("Operador no soportado: " + operador);
+            }
+        } else {
+            // Rama aritmética con enteros (comportamiento original)
+            switch (operador) {
+                case "+":
+                    methodVisitor.visitInsn(IADD);
+                    return;
+                case "-":
+                    methodVisitor.visitInsn(ISUB);
+                    return;
+                case "*":
+                    methodVisitor.visitInsn(IMUL);
+                    return;
+                case "/":
+                    methodVisitor.visitInsn(IDIV);
+                    return;
+                case "%":
+                    methodVisitor.visitInsn(IREM);
+                    return;
+
+                case ">":
+                    methodVisitor.visitJumpInsn(IF_ICMPGT, verdadero);
+                    break;
+                case "<":
+                    methodVisitor.visitJumpInsn(IF_ICMPLT, verdadero);
+                    break;
+                case ">=":
+                    methodVisitor.visitJumpInsn(IF_ICMPGE, verdadero);
+                    break;
+                case "<=":
+                    methodVisitor.visitJumpInsn(IF_ICMPLE, verdadero);
+                    break;
+                case "==":
+                    methodVisitor.visitJumpInsn(IF_ICMPEQ, verdadero);
+                    break;
+                case "!=":
+                    methodVisitor.visitJumpInsn(IF_ICMPNE, verdadero);
+                    break;
+
+                default:
+                    throw new RuntimeException("Operador no soportado: " + operador);
+            }
         }
+
 
         methodVisitor.visitInsn(ICONST_0);
         methodVisitor.visitJumpInsn(GOTO, fin);
@@ -1101,7 +1306,7 @@ public class GeneradorBytecode {
         for (String[] param : nodo.getParametros()) {
             TipoDato tipo = convertirTipo(param[0]);
             tabla.agregarParametro(param[1], tipo, indiceParam);  // ← índice JVM explícito
-            indiceParam++;
+            indiceParam += (tipo == TipoDato.NUMERO) ? 2 : 1;
         }
 
         tabla.resetearContador(indiceParam);
@@ -1266,8 +1471,10 @@ public class GeneradorBytecode {
         if (nodo.tieneValor()) {
             generarExpresion(nodo.getValor());
             TipoDato tipo = inferirTipoCompleto(nodo.getValor());
-            if (tipo == TipoDato.TEXTO || tipo == TipoDato.OBJETO) {
+            if (tipo == TipoDato.TEXTO || tipo == TipoDato.OBJETO || tipo == TipoDato.LISTA) {
                 methodVisitor.visitInsn(ARETURN);
+            } else if (tipo == TipoDato.NUMERO) {
+                methodVisitor.visitInsn(DRETURN);
             } else {
                 methodVisitor.visitInsn(IRETURN);
             }
@@ -1277,12 +1484,12 @@ public class GeneradorBytecode {
     }
 
     private TipoDato inferirTipoExpresion(Expresion expr) {
-        if (expr instanceof LiteralString)    return TipoDato.TEXTO;
-        if (expr instanceof LiteralNumero)    return TipoDato.ENTERO;
-        if (expr instanceof LiteralLista)     return TipoDato.LISTA;
-        if (expr instanceof LiteralJsn)       return TipoDato.JSN;
-        if (expr instanceof Concatenacion)    return TipoDato.TEXTO;
-        if (expr instanceof ConversionTexto)  return TipoDato.TEXTO;
+        if (expr instanceof LiteralString) return TipoDato.TEXTO;
+        if (expr instanceof LiteralNumero) return TipoDato.ENTERO;
+        if (expr instanceof LiteralLista) return TipoDato.LISTA;
+        if (expr instanceof LiteralJsn) return TipoDato.JSN;
+        if (expr instanceof Concatenacion) return TipoDato.TEXTO;
+        if (expr instanceof ConversionTexto) return TipoDato.TEXTO;
         if (expr instanceof ConversionNumero) return TipoDato.ENTERO;
 
         if (expr instanceof Variable) {
@@ -1291,6 +1498,13 @@ public class GeneradorBytecode {
 
         if (expr instanceof LlamadaFuncion) {
             LlamadaFuncion llamada = (LlamadaFuncion) expr;
+            // metodo sobre primitivo: entero.texto(), log.texto(), etc.
+            if (!llamada.getObjeto().isEmpty()
+                    && esPrimitivo(llamada.getObjeto())
+                    && esMetodoPrimitivo(llamada.getMetodo())) {
+                TipoDato tr = tipoRetornoMetodoPrimitivo(llamada.getMetodo());
+                return tr != null ? tr : TipoDato.TEXTO;
+            }
             // método de lista
             if (!llamada.getObjeto().isEmpty() && esLista(llamada.getObjeto())) {
                 TipoDato tr = tipoRetornoMetodoLista(llamada.getMetodo());
@@ -1327,6 +1541,8 @@ public class GeneradorBytecode {
             return TipoDato.TEXTO;
         } else if (expr instanceof LiteralNumero) {
             return TipoDato.ENTERO;
+        } else if (expr instanceof LiteralDecimal) {
+            return TipoDato.NUMERO;
         } else if (expr instanceof ExpresionAmbiente) {
             // Buscar el tipo del campo en el objeto actual
             String campo = ((ExpresionAmbiente) expr).getCampo();
@@ -1341,6 +1557,13 @@ public class GeneradorBytecode {
             return TipoDato.TEXTO; // default para campos de objeto
         } else if (expr instanceof LlamadaFuncion) {
             LlamadaFuncion llamada = (LlamadaFuncion) expr;
+            // metodo sobre primitivo: entero.texto(), log.texto(), etc.
+            if (llamada.getObjeto() != null && !llamada.getObjeto().isEmpty()
+                    && esPrimitivo(llamada.getObjeto())
+                    && esMetodoPrimitivo(llamada.getMetodo())) {
+                TipoDato tr = tipoRetornoMetodoPrimitivo(llamada.getMetodo());
+                return tr != null ? tr : TipoDato.TEXTO;
+            }
             // metodo de lista: nums.texto(), nums.longitud(), ...
             if (llamada.getObjeto() != null && !llamada.getObjeto().isEmpty()
                     && esLista(llamada.getObjeto())) {
@@ -1371,7 +1594,10 @@ public class GeneradorBytecode {
             TipoDato izq = inferirTipoCompleto(((OperacionBinaria) expr).getIzquierda());
             TipoDato der = inferirTipoCompleto(((OperacionBinaria) expr).getDerecha());
             if (izq == TipoDato.TEXTO || der == TipoDato.TEXTO) return TipoDato.TEXTO;
+            // Si cualquier operando es NUMERO, el resultado es NUMERO (promoción a double)
+            if (izq == TipoDato.NUMERO || der == TipoDato.NUMERO) return TipoDato.NUMERO;
             return TipoDato.ENTERO;
+
         }
         return TipoDato.ENTERO;
     }
@@ -1380,10 +1606,14 @@ public class GeneradorBytecode {
     private String descriptorTipo(String tipo) {
         switch (tipo.toLowerCase()) {
             case "entero":
-            case "log":     return "I";
-            case "numero":  return "D";
-            case "texto":   return "Ljava/lang/String;";
-            case "vacio":   return "V";
+            case "log":
+                return "I";
+            case "numero":
+                return "D";
+            case "texto":
+                return "Ljava/lang/String;";
+            case "vacio":
+                return "V";
             default:
                 // lista<entero>, lista<texto>, lista sin tipo
                 if (tipo.startsWith("lista")) {
@@ -1444,7 +1674,7 @@ public class GeneradorBytecode {
         if (llamada.getMetodo().equals("rango")) {
             List<Expresion> args = llamada.getArgumentos();
             int slotRangoLista = contadorSlots++;
-            int slotRangoIdx   = contadorSlots++;
+            int slotRangoIdx = contadorSlots++;
             int inicio, fin2;
 
             methodVisitor.visitTypeInsn(NEW, "java/util/ArrayList");
@@ -1459,7 +1689,8 @@ public class GeneradorBytecode {
             }
             methodVisitor.visitVarInsn(ISTORE, slotRangoIdx);
 
-            Label loopR = new Label(); Label finR = new Label();
+            Label loopR = new Label();
+            Label finR = new Label();
             methodVisitor.visitLabel(loopR);
             methodVisitor.visitVarInsn(ILOAD, slotRangoIdx);
             generarExpresion(args.size() == 1 ? args.get(0) : args.get(1));
@@ -1480,17 +1711,39 @@ public class GeneradorBytecode {
 
     private boolean esMetodoLista(String metodo) {
         switch (metodo) {
-            case "longitud": case "agregar": case "texto":
-            case "primero":  case "ultimo":  case "sumar":
-            case "esta_vacia": case "contiene": case "remover":
-            case "ordenar": case "ordenar_descendente": case "invertir":
-            case "buscar": case "buscar_ultimo": case "contar":
-            case "promedio": case "maximo": case "minimo":
-            case "unir": case "sublista": case "tomar": case "saltar":
-            case "limpiar": case "quitar_en": case "insertar": case "ordenado":
-            case "concatenar": case "extender": case "json": case "logico":
+            case "longitud":
+            case "agregar":
+            case "texto":
+            case "primero":
+            case "ultimo":
+            case "sumar":
+            case "esta_vacia":
+            case "contiene":
+            case "remover":
+            case "ordenar":
+            case "ordenar_descendente":
+            case "invertir":
+            case "buscar":
+            case "buscar_ultimo":
+            case "contar":
+            case "promedio":
+            case "maximo":
+            case "minimo":
+            case "unir":
+            case "sublista":
+            case "tomar":
+            case "saltar":
+            case "limpiar":
+            case "quitar_en":
+            case "insertar":
+            case "ordenado":
+            case "concatenar":
+            case "extender":
+            case "json":
+            case "logico":
                 return true;
-            default: return false;
+            default:
+                return false;
         }
     }
 
@@ -1535,10 +1788,10 @@ public class GeneradorBytecode {
             case "sumar":
                 // Usamos un loop: int suma = 0; for each → suma += elem
                 Label inicioLoop = new Label();
-                Label finLoop    = new Label();
-                int slotLista    = contadorSlots++;
+                Label finLoop = new Label();
+                int slotLista = contadorSlots++;
                 int slotContador = contadorSlots++;
-                int slotSuma     = contadorSlots++;
+                int slotSuma = contadorSlots++;
 
                 methodVisitor.visitVarInsn(ASTORE, slotLista);
                 methodVisitor.visitInsn(ICONST_0);
@@ -1630,10 +1883,10 @@ public class GeneradorBytecode {
 
             case "contar": {
                 // Stack al entrar: [lista]
-                int slotLista2  = contadorSlots++;
-                int slotElem    = contadorSlots++;
-                int slotCount   = contadorSlots++;
-                int slotIdx     = contadorSlots++;
+                int slotLista2 = contadorSlots++;
+                int slotElem = contadorSlots++;
+                int slotCount = contadorSlots++;
+                int slotIdx = contadorSlots++;
                 methodVisitor.visitVarInsn(ASTORE, slotLista2); // guardar lista
                 generarExpresionComoObjeto(llamada.getArgumentos().get(0)); // generar elem
                 methodVisitor.visitVarInsn(ASTORE, slotElem);   // guardar elem
@@ -1641,7 +1894,8 @@ public class GeneradorBytecode {
                 methodVisitor.visitVarInsn(ISTORE, slotCount);
                 methodVisitor.visitInsn(ICONST_0);
                 methodVisitor.visitVarInsn(ISTORE, slotIdx);
-                Label loopC = new Label(); Label finC = new Label();
+                Label loopC = new Label();
+                Label finC = new Label();
                 methodVisitor.visitLabel(loopC);
                 methodVisitor.visitVarInsn(ALOAD, slotLista2);
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "size", "()I", false);
@@ -1664,15 +1918,16 @@ public class GeneradorBytecode {
             }
 
             case "promedio": {
-                int slotListaP  = contadorSlots++;
-                int slotSumaP   = contadorSlots++;
-                int slotIdxP    = contadorSlots++;
+                int slotListaP = contadorSlots++;
+                int slotSumaP = contadorSlots++;
+                int slotIdxP = contadorSlots++;
                 methodVisitor.visitVarInsn(ASTORE, slotListaP);
                 methodVisitor.visitInsn(ICONST_0);
                 methodVisitor.visitVarInsn(ISTORE, slotSumaP);
                 methodVisitor.visitInsn(ICONST_0);
                 methodVisitor.visitVarInsn(ISTORE, slotIdxP);
-                Label loopP = new Label(); Label finP = new Label();
+                Label loopP = new Label();
+                Label finP = new Label();
                 methodVisitor.visitLabel(loopP);
                 methodVisitor.visitVarInsn(ALOAD, slotListaP);
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "size", "()I", false);
@@ -1698,8 +1953,8 @@ public class GeneradorBytecode {
 
             case "maximo": {
                 int slotListaM = contadorSlots++;
-                int slotMax    = contadorSlots++;
-                int slotIdxM   = contadorSlots++;
+                int slotMax = contadorSlots++;
+                int slotIdxM = contadorSlots++;
                 methodVisitor.visitVarInsn(ASTORE, slotListaM);
                 methodVisitor.visitVarInsn(ALOAD, slotListaM);
                 methodVisitor.visitInsn(ICONST_0);
@@ -1709,7 +1964,8 @@ public class GeneradorBytecode {
                 methodVisitor.visitVarInsn(ISTORE, slotMax);
                 methodVisitor.visitInsn(ICONST_1);
                 methodVisitor.visitVarInsn(ISTORE, slotIdxM);
-                Label loopM = new Label(); Label finM = new Label();
+                Label loopM = new Label();
+                Label finM = new Label();
                 methodVisitor.visitLabel(loopM);
                 methodVisitor.visitVarInsn(ALOAD, slotListaM);
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "size", "()I", false);
@@ -1739,8 +1995,8 @@ public class GeneradorBytecode {
 
             case "minimo": {
                 int slotListaN = contadorSlots++;
-                int slotMin    = contadorSlots++;
-                int slotIdxN   = contadorSlots++;
+                int slotMin = contadorSlots++;
+                int slotIdxN = contadorSlots++;
                 methodVisitor.visitVarInsn(ASTORE, slotListaN);
                 methodVisitor.visitVarInsn(ALOAD, slotListaN);
                 methodVisitor.visitInsn(ICONST_0);
@@ -1750,7 +2006,8 @@ public class GeneradorBytecode {
                 methodVisitor.visitVarInsn(ISTORE, slotMin);
                 methodVisitor.visitInsn(ICONST_1);
                 methodVisitor.visitVarInsn(ISTORE, slotIdxN);
-                Label loopN = new Label(); Label finN = new Label();
+                Label loopN = new Label();
+                Label finN = new Label();
                 methodVisitor.visitLabel(loopN);
                 methodVisitor.visitVarInsn(ALOAD, slotListaN);
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "size", "()I", false);
@@ -1779,10 +2036,10 @@ public class GeneradorBytecode {
             }
 
             case "unir": {
-                int slotListaU  = contadorSlots++;
-                int slotDelim   = contadorSlots++;
-                int slotIdxU    = contadorSlots++;
-                int slotSbU     = contadorSlots++;
+                int slotListaU = contadorSlots++;
+                int slotDelim = contadorSlots++;
+                int slotIdxU = contadorSlots++;
+                int slotSbU = contadorSlots++;
                 methodVisitor.visitVarInsn(ASTORE, slotListaU);
                 generarExpresionString(llamada.getArgumentos().get(0));
                 methodVisitor.visitVarInsn(ASTORE, slotDelim);
@@ -1792,7 +2049,8 @@ public class GeneradorBytecode {
                 methodVisitor.visitVarInsn(ASTORE, slotSbU);
                 methodVisitor.visitInsn(ICONST_0);
                 methodVisitor.visitVarInsn(ISTORE, slotIdxU);
-                Label loopU = new Label(); Label finU = new Label();
+                Label loopU = new Label();
+                Label finU = new Label();
                 methodVisitor.visitLabel(loopU);
                 methodVisitor.visitVarInsn(ALOAD, slotListaU);
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/util/ArrayList", "size", "()I", false);
@@ -1917,7 +2175,7 @@ public class GeneradorBytecode {
             }
             case "concatenar": {
                 // lista ya está en stack → guardar
-                int slotBase   = contadorSlots++;
+                int slotBase = contadorSlots++;
                 int slotResult = contadorSlots++;
                 methodVisitor.visitVarInsn(ASTORE, slotBase);
                 // new ArrayList(copiaDeBase)
@@ -1960,7 +2218,7 @@ public class GeneradorBytecode {
                         "isEmpty", "()Z", false);
                 // isEmpty devuelve 1 si vacía → necesitamos NOT
                 Label esVacia = new Label();
-                Label finLog  = new Label();
+                Label finLog = new Label();
                 methodVisitor.visitJumpInsn(IFNE, esVacia);
                 methodVisitor.visitInsn(ICONST_1);
                 methodVisitor.visitJumpInsn(GOTO, finLog);
@@ -1969,7 +2227,6 @@ public class GeneradorBytecode {
                 methodVisitor.visitLabel(finLog);
                 break;
             }
-
 
 
         }
@@ -2051,11 +2308,11 @@ public class GeneradorBytecode {
             // ── texto() → serialización JSON compacta: {"k":"v","k2":2} ──
             case "texto": {
                 // Construimos el JSON compacto manualmente con StringBuilder
-                int slotMapa  = contadorSlots++;
-                int slotSb    = contadorSlots++;
-                int slotKeys  = contadorSlots++;
-                int slotIdx   = contadorSlots++;
-                int slotSize  = contadorSlots++;
+                int slotMapa = contadorSlots++;
+                int slotSb = contadorSlots++;
+                int slotKeys = contadorSlots++;
+                int slotIdx = contadorSlots++;
+                int slotSize = contadorSlots++;
 
                 methodVisitor.visitVarInsn(ASTORE, slotMapa);
 
@@ -2089,7 +2346,7 @@ public class GeneradorBytecode {
                 methodVisitor.visitVarInsn(ISTORE, slotIdx);
 
                 Label loopT = new Label();
-                Label finT  = new Label();
+                Label finT = new Label();
                 methodVisitor.visitLabel(loopT);
                 methodVisitor.visitVarInsn(ILOAD, slotIdx);
                 methodVisitor.visitVarInsn(ILOAD, slotSize);
@@ -2139,7 +2396,7 @@ public class GeneradorBytecode {
                 int slotValStr = contadorSlots++;
                 methodVisitor.visitVarInsn(ALOAD, slotVal);
                 Label noEsString = new Label();
-                Label finVal    = new Label();
+                Label finVal = new Label();
                 methodVisitor.visitTypeInsn(INSTANCEOF, "java/lang/String");
                 methodVisitor.visitJumpInsn(IFEQ, noEsString);
                 // es String → "\"valor\""
@@ -2191,11 +2448,11 @@ public class GeneradorBytecode {
 
             // ── texto_formateado() → igual que texto() pero con saltos e indentación ──
             case "texto_formateado": {
-                int slotMapa2  = contadorSlots++;
-                int slotSb2    = contadorSlots++;
-                int slotKeys2  = contadorSlots++;
-                int slotIdx2   = contadorSlots++;
-                int slotSize2  = contadorSlots++;
+                int slotMapa2 = contadorSlots++;
+                int slotSb2 = contadorSlots++;
+                int slotKeys2 = contadorSlots++;
+                int slotIdx2 = contadorSlots++;
+                int slotSize2 = contadorSlots++;
 
                 methodVisitor.visitVarInsn(ASTORE, slotMapa2);
 
@@ -2227,7 +2484,7 @@ public class GeneradorBytecode {
                 methodVisitor.visitVarInsn(ISTORE, slotIdx2);
 
                 Label loopF = new Label();
-                Label finF  = new Label();
+                Label finF = new Label();
                 methodVisitor.visitLabel(loopF);
                 methodVisitor.visitVarInsn(ILOAD, slotIdx2);
                 methodVisitor.visitVarInsn(ILOAD, slotSize2);
@@ -2265,7 +2522,7 @@ public class GeneradorBytecode {
                 int slotValStr2 = contadorSlots++;
                 methodVisitor.visitVarInsn(ALOAD, slotVal2);
                 Label noEsStr2 = new Label();
-                Label finVal2  = new Label();
+                Label finVal2 = new Label();
                 methodVisitor.visitTypeInsn(INSTANCEOF, "java/lang/String");
                 methodVisitor.visitJumpInsn(IFEQ, noEsStr2);
                 // es String
@@ -2339,14 +2596,21 @@ public class GeneradorBytecode {
 
     private TipoDato inferirTipoArgConsola(Expresion arg) {
         if (arg instanceof LiteralNumero) return TipoDato.ENTERO;
+        if (arg instanceof LiteralDecimal) return TipoDato.NUMERO;
         if (arg instanceof LiteralString) return TipoDato.TEXTO;
-        if (arg instanceof Concatenacion) return TipoDato.TEXTO;
         if (arg instanceof Variable) {
             TipoDato t = tabla.obtenerTipo(((Variable) arg).getNombre());
             return t;
         }
         if (arg instanceof LlamadaFuncion) {
             LlamadaFuncion lf = (LlamadaFuncion) arg;
+            // primitivo: entero.texto(), log.texto()
+            if (!lf.getObjeto().isEmpty()
+                    && esPrimitivo(lf.getObjeto())
+                    && esMetodoPrimitivo(lf.getMetodo())) {
+                TipoDato tr = tipoRetornoMetodoPrimitivo(lf.getMetodo());
+                return tr != null ? tr : TipoDato.TEXTO;
+            }
             if (!lf.getObjeto().isEmpty() && esLista(lf.getObjeto())) {
                 TipoDato tr = tipoRetornoMetodoLista(lf.getMetodo());
                 return tr != null ? tr : TipoDato.ENTERO;
@@ -2363,6 +2627,7 @@ public class GeneradorBytecode {
 
     private void generarLlamadaConsola(LlamadaFuncion llamada) {
         String metodo = llamada.getMetodo();
+
 
         if (metodo.equals("mostrar")) {
             if (llamada.getArgumentos().isEmpty()) {
@@ -2390,6 +2655,11 @@ public class GeneradorBytecode {
                 generarExpresion(arg);
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream",
                         "println", "(I)V", false);
+            } else if (tipoArg == TipoDato.NUMERO) {
+                // Double directo → println(double)
+                generarExpresion(arg);
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream",
+                        "println", "(D)V", false);
             } else {
                 // Texto, interpolación, objetos → convertir a String → println(String)
                 generarExpresionString(arg);
@@ -2447,8 +2717,12 @@ public class GeneradorBytecode {
             } else if (tipo == TipoDato.OBJETO) {
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
                         "valueOf", "(Ljava/lang/Object;)Ljava/lang/String;", false);
+            } else if (tipo == TipoDato.NUMERO) {
+                // NUMERO -> double -> String
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
+                        "valueOf", "(D)Ljava/lang/String;", false);
             } else {
-                // ENTERO, LOG, NUMERO -> int -> String
+                // ENTERO, LOG -> int -> String
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
                         "valueOf", "(I)Ljava/lang/String;", false);
             }
@@ -2465,8 +2739,12 @@ public class GeneradorBytecode {
             } else if (tipo == TipoDato.JSN) {
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/util/LinkedHashMap",
                         "toString", "()Ljava/lang/String;", false);
+            } else if (tipo == TipoDato.NUMERO) {
+                // NUMERO -> double -> String
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
+                        "valueOf", "(D)Ljava/lang/String;", false);
             } else {
-                // ENTERO, LOG, NUMERO -> int -> String
+                // ENTERO, LOG -> int -> String
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
                         "valueOf", "(I)Ljava/lang/String;", false);
             }
@@ -2476,11 +2754,24 @@ public class GeneradorBytecode {
             methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
                     "valueOf", "(I)Ljava/lang/String;", false);
 
+        } else if (expr instanceof LiteralDecimal) {
+            generarLiteralDecimal((LiteralDecimal) expr);
+            methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
+                    "valueOf", "(D)Ljava/lang/String;", false);
+
         } else if (expr instanceof LlamadaFuncion) {
             LlamadaFuncion llamada = (LlamadaFuncion) expr;
 
-            // 1) Metodo de JSN: datos.texto(), persona.claves(), persona.contiene_clave(..), etc.
+            // 0) Metodo sobre primitivo: edad.texto(), activo.texto()
             if (!llamada.getObjeto().isEmpty()
+                    && !llamada.getObjeto().equals("consola")
+                    && esPrimitivo(llamada.getObjeto())
+                    && esMetodoPrimitivo(llamada.getMetodo())) {
+                generarMetodoPrimitivo(llamada);
+                // ya deja String en la pila, nada mas que hacer
+
+                // 1) Metodo de JSN: datos.texto(), persona.claves(), persona.contiene_clave(..), etc.
+            } else if (!llamada.getObjeto().isEmpty()
                     && !llamada.getObjeto().equals("consola")
                     && esJsn(llamada.getObjeto())
                     && esMetodoJsn(llamada.getMetodo())) {
@@ -2631,11 +2922,14 @@ public class GeneradorBytecode {
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/util/LinkedHashMap",
                         "toString", "()Ljava/lang/String;", false);
             } else if (tipo == TipoDato.OBJETO) {
-                // Object generico -> String.valueOf(Object) (maneja null con seguridad)
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
                         "valueOf", "(Ljava/lang/Object;)Ljava/lang/String;", false);
+            } else if (tipo == TipoDato.NUMERO) {
+                // NUMERO -> double -> String
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
+                        "valueOf", "(D)Ljava/lang/String;", false);
             } else {
-                // ENTERO, LOG, NUMERO -> int -> String
+                // ENTERO, LOG -> int -> String
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/String",
                         "valueOf", "(I)Ljava/lang/String;", false);
             }
@@ -2643,9 +2937,7 @@ public class GeneradorBytecode {
             // Cierre OBLIGATORIO: append(String) al StringBuilder que ya esta en la pila
             methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
                     "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
-        }
-
-        else if (expr instanceof Variable) {
+        } else if (expr instanceof Variable) {
             String nombre = ((Variable) expr).getNombre();
             generarVariable((Variable) expr);
             TipoDato tipo = tabla.obtenerTipo(nombre);
@@ -2673,19 +2965,39 @@ public class GeneradorBytecode {
 
         } else if (expr instanceof OperacionBinaria) {
             generarExpresion(expr);
-            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
-                    "append", "(I)Ljava/lang/StringBuilder;", false);
+            TipoDato tipoOp = inferirTipoCompleto(expr);
+            if (tipoOp == TipoDato.TEXTO) {
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
+                        "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
+            } else if (tipoOp == TipoDato.NUMERO) {
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
+                        "append", "(D)Ljava/lang/StringBuilder;", false);
+            } else {
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
+                        "append", "(I)Ljava/lang/StringBuilder;", false);
+            }
 
         } else if (expr instanceof OperacionUnaria) {
             generarExpresion(expr);
-            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
-                    "append", "(I)Ljava/lang/StringBuilder;", false);
-
+            TipoDato tipoOpU = inferirTipoCompleto(expr);
+            if (tipoOpU == TipoDato.NUMERO) {
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
+                        "append", "(D)Ljava/lang/StringBuilder;", false);
+            } else {
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
+                        "append", "(I)Ljava/lang/StringBuilder;", false);
+            }
         } else if (expr instanceof LlamadaFuncion) {
             LlamadaFuncion llamada = (LlamadaFuncion) expr;
             TipoDato tipoRetorno;
 
-            if (!llamada.getObjeto().isEmpty() && esLista(llamada.getObjeto())) {
+            // Metodo sobre primitivo: edad.texto(), activo.texto()
+            if (!llamada.getObjeto().isEmpty()
+                    && esPrimitivo(llamada.getObjeto())
+                    && esMetodoPrimitivo(llamada.getMetodo())) {
+                generarMetodoPrimitivo(llamada);
+                tipoRetorno = TipoDato.TEXTO;
+            } else if (!llamada.getObjeto().isEmpty() && esLista(llamada.getObjeto())) {
                 generarMetodoLista(llamada);
                 tipoRetorno = tipoRetornoMetodoLista(llamada.getMetodo());
                 if (tipoRetorno == null) {
@@ -2697,8 +3009,7 @@ public class GeneradorBytecode {
                         tipoRetorno = TipoDato.ENTERO;
                     }
                 }
-            }
-           else if (!llamada.getObjeto().isEmpty() && esMetodoJsn(llamada.getMetodo())) {
+            } else if (!llamada.getObjeto().isEmpty() && esMetodoJsn(llamada.getMetodo())) {
                 generarMetodoJsn(llamada);
                 tipoRetorno = tipoRetornoMetodoJsn(llamada.getMetodo());
                 if (tipoRetorno == null) tipoRetorno = TipoDato.ENTERO;
@@ -2740,9 +3051,7 @@ public class GeneradorBytecode {
                 methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",
                         "append", "(I)Ljava/lang/StringBuilder;", false);
             }
-        }
-
-        else if (expr instanceof AccesoJsn) {
+        } else if (expr instanceof AccesoJsn) {
             generarAccesoJsn((AccesoJsn) expr);
             methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/String");
             methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder",

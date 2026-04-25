@@ -1,0 +1,138 @@
+// ============================================
+// TEST POO - Capa 1
+// Cubre: herencia simple, libre (static),
+//        padre.X(args), padre.X.metodo(),
+//        publico/privado
+// ============================================
+
+// ────────────────────────────────────────────
+// PARTE 1: Objeto con libre (miembros estaticos)
+// ────────────────────────────────────────────
+objeto MatematicaBasica {
+    publico:
+        libre entero sumar(entero a, entero b) {
+            retornar a + b
+        }
+
+        libre entero cuadrado(entero n) {
+            retornar n * n
+        }
+}
+
+consola.mostrar("=== PARTE 1: libre (static) ===")
+entero r1 = MatematicaBasica.sumar(2, 3)
+consola.mostrar(t"sumar(2, 3) = {r1}")
+
+entero r2 = MatematicaBasica.cuadrado(7)
+consola.mostrar(t"cuadrado(7) = {r2}")
+
+
+// ────────────────────────────────────────────
+// PARTE 2: Herencia simple
+// ────────────────────────────────────────────
+objeto Animal {
+    privado:
+        texto var nombre
+
+    publico:
+        Animal(texto nombre) {
+            ambiente.nombre = nombre
+        }
+
+        texto obtener_nombre() {
+            retornar ambiente.nombre
+        }
+
+        texto describir() {
+            retornar "Soy un animal llamado" + ambiente.nombre
+        }
+}
+
+objeto Perro como Animal {
+    publico:
+        Perro(texto nombre) {
+            padre.Animal(nombre)
+        }
+
+        texto ladrar() {
+            retornar "Guau!"
+        }
+}
+
+consola.mostrar("=== PARTE 2: herencia simple ===")
+Perro firulais = nuevo Perro("Firulais")
+consola.mostrar(t"nombre (heredado): {firulais.obtener_nombre()}")
+consola.mostrar(t"ladrar (propio):   {firulais.ladrar()}")
+consola.mostrar(t"describir (heredado): {firulais.describir()}")
+
+
+// ────────────────────────────────────────────
+// PARTE 3: Sobrescritura de metodos
+// ────────────────────────────────────────────
+objeto Gato como Animal {
+    publico:
+        Gato(texto nombre) {
+            padre.Animal(nombre)
+        }
+
+        texto describir() {
+            retornar "Soy un gato llamado " + ambiente.nombre
+        }
+
+        texto maullar() {
+            retornar "Miau!"
+        }
+}
+
+consola.mostrar("=== PARTE 3: sobrescritura ===")
+Gato michi = nuevo Gato("Michi")
+consola.mostrar(t"describir (sobrescrito): {michi.describir()}")
+consola.mostrar(t"maullar: {michi.maullar()}")
+
+
+// ────────────────────────────────────────────
+// PARTE 4: padre.Nombre.metodo() desde sobrescrito
+// ────────────────────────────────────────────
+objeto Loro como Animal {
+    publico:
+        Loro(texto nombre) {
+            padre.Animal(nombre)
+        }
+
+        texto describir() {
+            texto base = padre.Animal.describir()
+            retornar base + ", especificamente un loro"
+        }
+}
+
+consola.mostrar("=== PARTE 4: llamar metodo del padre ===")
+Loro pepe = nuevo Loro("Pepe")
+consola.mostrar(pepe.describir())
+
+
+// ────────────────────────────────────────────
+// PARTE 5: publico vs privado
+// ────────────────────────────────────────────
+objeto Banco {
+    privado:
+        entero var saldo
+
+        entero obtener_saldo_interno() {
+            retornar ambiente.saldo
+        }
+
+    publico:
+        Banco(entero inicial) {
+            ambiente.saldo = inicial
+        }
+
+        entero consultar() {
+            retornar ambiente.obtener_saldo_interno()
+        }
+}
+
+consola.mostrar("=== PARTE 5: publico y privado ===")
+Banco b = nuevo Banco(500)
+consola.mostrar(t"saldo via metodo publico: {b.consultar()}")
+
+consola.mostrar("=== FIN DE PRUEBAS POO ===")

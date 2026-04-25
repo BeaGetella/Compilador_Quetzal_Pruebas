@@ -14,6 +14,7 @@ public class Lexer {
         // Tipos de datos
         PALABRAS_RESERVADAS.put("vacio",       TipoToken.TIPO_VACIO);
         PALABRAS_RESERVADAS.put("entero",      TipoToken.TIPO_ENTERO);
+        PALABRAS_RESERVADAS.put("número",      TipoToken.TIPO_NUMERO);
         PALABRAS_RESERVADAS.put("numero",      TipoToken.TIPO_NUMERO);
         PALABRAS_RESERVADAS.put("texto",       TipoToken.TIPO_TEXTO);
         PALABRAS_RESERVADAS.put("log",         TipoToken.TIPO_LOG);
@@ -101,10 +102,27 @@ public class Lexer {
     private Token leerNumero() {
         StringBuilder numero = new StringBuilder();
         int lineaInicio = linea;
+        boolean esDecimal = false;
 
+        // Parte entera
         while (Character.isDigit(caracterActual)) {
             numero.append(caracterActual);
             avanzar();
+        }
+
+
+        if (caracterActual == '.' && Character.isDigit(verSiguiente())) {
+            esDecimal = true;
+            numero.append(caracterActual); // el punto
+            avanzar();
+            while (Character.isDigit(caracterActual)) {
+                numero.append(caracterActual);
+                avanzar();
+            }
+        }
+
+        if (esDecimal) {
+            return new Token(TipoToken.LITERAL_DECIMAL, numero.toString(), lineaInicio);
         }
 
         return new Token(TipoToken.LITERAL_NUMERO, numero.toString(), lineaInicio);

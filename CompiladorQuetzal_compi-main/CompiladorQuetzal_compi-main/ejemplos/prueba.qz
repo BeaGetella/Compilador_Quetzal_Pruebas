@@ -1,0 +1,28 @@
+// Variables antes
+texto nombre = "Ana"
+entero edad = 25
+
+
+consola.mostrar("3. Usando funciones...")
+
+// Función para calcular área de un círculo
+numero calcular_area_circulo(numero radio) {
+    numero pi = 3.14159
+    retornar pi * radio * radio
+}
+
+// Función para crear saludo personalizado
+texto crear_saludo(texto nombre_persona, entero edad_persona) {
+    si (edad_persona >= 18) {
+        retornar "Hola " + nombre_persona + ", eres mayor de edad"
+    } sino {
+        retornar "Hola " + nombre_persona + ", eres menor de edad"
+    }
+}
+
+// Usar las funciones
+numero area = calcular_area_circulo(5.0)
+texto saludo = crear_saludo(nombre, edad)
+
+consola.mostrar("Área del círculo (radio 5): " + area.texto())
+consola.mostrar(saludo)

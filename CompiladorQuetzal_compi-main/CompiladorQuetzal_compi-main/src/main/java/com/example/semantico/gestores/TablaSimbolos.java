@@ -38,7 +38,8 @@ public class TablaSimbolos {
         }
 
         // Crear nuevo símbolo
-        int indice = contadorIndices++;
+        int indice = contadorIndices;
+        contadorIndices += tamañoSlot(tipo);
         Simbolo simbolo = new Simbolo(nombre, tipo, TipoSimbolo.VARIABLE, linea, indice);
         scopeActual.agregar(nombre, simbolo);
 
@@ -53,7 +54,8 @@ public class TablaSimbolos {
                             "' ya declarada en línea " + existente.getLineaDeclaracion()
             );
         }
-        int indice = contadorIndices++;
+        int indice = contadorIndices;
+        contadorIndices += tamañoSlot(tipo);
         Simbolo simbolo = new Simbolo(nombre, tipo, TipoSimbolo.VARIABLE, linea, indice);
         simbolo.setTipoDeclarado(tipoDeclarado); // ← guardar "lista<texto>"
         scopeActual.agregar(nombre, simbolo);
@@ -77,6 +79,10 @@ public class TablaSimbolos {
 
     public int getContadorIndices() {
         return contadorIndices;
+    }
+
+    private int tamañoSlot(TipoDato tipo) {
+        return tipo == TipoDato.NUMERO ? 2 : 1;
     }
 
     // Entrar a un nuevo scope (para funciones, if, while, etc.)
@@ -117,8 +123,6 @@ public class TablaSimbolos {
         int indice = indiceJVM;
         Simbolo simbolo = new Simbolo(nombre, tipo, TipoSimbolo.VARIABLE, 0, indice);
         scopeActual.agregar(nombre, simbolo);
-
-
     }
 
 

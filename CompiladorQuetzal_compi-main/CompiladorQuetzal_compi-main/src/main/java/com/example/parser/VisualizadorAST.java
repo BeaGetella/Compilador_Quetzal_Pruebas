@@ -211,6 +211,10 @@ public class VisualizadorAST {
             LiteralNumero literal = (LiteralNumero) expr;
             System.out.println(prefijo + marcador + "LiteralNumero(" + literal.getValor() + ")");
 
+        } else if (expr instanceof LiteralDecimal) {
+            LiteralDecimal literal = (LiteralDecimal) expr;
+            System.out.println(prefijo + marcador + "LiteralDecimal(" + literal.getValor() + ")");
+
         } else if (expr instanceof LiteralString) {
             LiteralString literal = (LiteralString) expr;
             System.out.println(prefijo + marcador + "LiteralString(\"" + literal.getValor() + "\")");
