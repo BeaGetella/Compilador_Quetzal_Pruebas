@@ -1,0 +1,8 @@
+entero x = 15
+
+entero resultado = 0
+si (x > 10) {
+   entero w = 1
+} sino {
+  entero w = 2
+}

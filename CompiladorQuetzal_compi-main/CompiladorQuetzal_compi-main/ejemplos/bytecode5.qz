@@ -1,0 +1,5 @@
+entero e = 1
+entero f = 0
+
+numero h = e / f
+consola.mostrar(h)

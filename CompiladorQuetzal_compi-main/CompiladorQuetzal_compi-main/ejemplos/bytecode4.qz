@@ -1,0 +1,5 @@
+numero c = 10
+numero d = 3
+
+numero e = d / c
+consola.mostrar(e)

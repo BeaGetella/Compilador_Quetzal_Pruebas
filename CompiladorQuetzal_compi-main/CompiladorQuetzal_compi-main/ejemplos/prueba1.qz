@@ -1,0 +1,6 @@
+entero f(entero a) {
+    entero x = a + 1
+    retornar x
+}
+
+consola.mostrar(x.texto())

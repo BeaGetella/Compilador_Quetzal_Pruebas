@@ -614,9 +614,15 @@ public class GeneradorBytecode {
             if (tipo == TipoDato.OBJETO) {
                 tabla.registrarTipoObjeto(decl.getNombre(), decl.getTipo());
             }
-        } else if (tipo == TipoDato.NUMERO) {
-            methodVisitor.visitVarInsn(DSTORE, indiceVariable);
-        } else {
+
+    } else if (tipo == TipoDato.NUMERO) {
+        // Promoción automática: si la expresión generó un int, convertirlo a double
+        TipoDato tipoExpr = inferirTipoCompleto(decl.getValor());
+        if (tipoExpr != TipoDato.NUMERO) {
+            methodVisitor.visitInsn(I2D);
+        }
+        methodVisitor.visitVarInsn(DSTORE, indiceVariable);
+    }else {
             methodVisitor.visitVarInsn(ISTORE, indiceVariable);
         }
     }

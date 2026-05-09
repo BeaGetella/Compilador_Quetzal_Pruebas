@@ -1,0 +1,5 @@
+entero a = 15
+numero b = 15.5
+
+numero e = a + b
+consola.mostrar(e)
