@@ -1,0 +1,67 @@
+entero sumar(entero a, entero b) {
+    retornar a + b
+}
+
+entero restar(entero a, entero b) {
+    retornar a - b
+}
+
+entero multiplicar(entero a, entero b) {
+    retornar a * b
+}
+
+entero dividir(entero a, entero b) {
+    si (b == 0) {
+        consola.mostrar("Error: no se puede dividir entre 0")
+        retornar 0
+    }
+    retornar a / b
+}
+
+entero var opcion = 0
+
+mientras (opcion != 5) {
+    consola.mostrar("----- MENU -----")
+    consola.mostrar("1) Sumar")
+    consola.mostrar("2) Restar")
+    consola.mostrar("3) Multiplicar")
+    consola.mostrar("4) Dividir")
+    consola.mostrar("5) Salir")
+
+    texto opcionTexto = consola.pedir("Seleccione una opcion: ")
+    opcion = opcionTexto.entero()
+
+    si (opcion == 1) {
+        texto a1t = consola.pedir("Ingrese a: ")
+        entero a1 = a1t.entero()
+        texto b1t = consola.pedir("Ingrese b: ")
+        entero b1 = b1t.entero()
+        entero res1 = sumar(a1, b1)
+        consola.mostrar(t"Resultado: {res1}")
+    } sino si (opcion == 2) {
+        texto a2t = consola.pedir("Ingrese a: ")
+        entero a2 = a2t.entero()
+        texto b2t = consola.pedir("Ingrese b: ")
+        entero b2 = b2t.entero()
+        entero res2 = restar(a2, b2)
+        consola.mostrar(t"Resultado: {res2}")
+    } sino si (opcion == 3) {
+        texto a3t = consola.pedir("Ingrese a: ")
+        entero a3 = a3t.entero()
+        texto b3t = consola.pedir("Ingrese b: ")
+        entero b3 = b3t.entero()
+        entero res3 = multiplicar(a3, b3)
+        consola.mostrar(t"Resultado: {res3}")
+    } sino si (opcion == 4) {
+        texto a4t = consola.pedir("Ingrese a: ")
+        entero a4 = a4t.entero()
+        texto b4t = consola.pedir("Ingrese b: ")
+        entero b4 = b4t.entero()
+        entero res4 = dividir(a4, b4)
+        consola.mostrar(t"Resultado: {res4}")
+    } sino si (opcion == 5) {
+        consola.mostrar("Saliendo...")
+    } sino {
+        consola.mostrar("Opcion invalida")
+    }
+}

@@ -1,0 +1,8 @@
+texto entrada = consola.pedir("Ingrese un numero entero: ")
+entero n = entrada.numero()
+
+si (n % 2 == 0) {
+    consola.mostrar(t"El numero {n.texto()} es PAR")
+} sino {
+    consola.mostrar(t"El numero {n.texto()} es IMPAR")
+}

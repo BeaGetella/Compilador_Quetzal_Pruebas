@@ -487,6 +487,9 @@ public class Parser {
                 } else if (verificar(TipoToken.TIPO_NUMERO)) {
                     nombreMetodo = "numero";
                     avanzar();
+                } else if (verificar(TipoToken.TIPO_ENTERO)) {   // ← NUEVO
+                    nombreMetodo = "entero";                      // ← NUEVO
+                    avanzar();                                    // ← NUEVO
                 } else {
                     throw new RuntimeException("Se esperaba nombre de método en línea " + tokenActual.getLinea());
                 }
@@ -499,7 +502,13 @@ public class Parser {
                     consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
                     consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
                     return new ConversionNumero(new Variable(nombre));
-                } else if (verificar(TipoToken.PARENTESIS_IZQ)) {
+                }else if (nombreMetodo.equals("entero")) {      // ← NUEVO
+                    consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+                    consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                    return new ConversionEntero(new Variable(nombre));
+
+                }
+                else if (verificar(TipoToken.PARENTESIS_IZQ)) {
                     List<Expresion> args = new ArrayList<>();
                     avanzar();
                     while (!verificar(TipoToken.PARENTESIS_DER)) {
@@ -853,6 +862,8 @@ public class Parser {
                     nombreMetodo = "texto"; avanzar();
                 } else if (verificar(TipoToken.TIPO_NUMERO)) {
                     nombreMetodo = "numero"; avanzar();
+                } else if (verificar(TipoToken.TIPO_ENTERO)) {   // ← NUEVO
+                    nombreMetodo = "entero"; avanzar();           // ← NUEVO
                 } else {
                     throw new RuntimeException("Se esperaba nombre de método en línea " + tokenActual.getLinea());
                 }
@@ -865,6 +876,10 @@ public class Parser {
                     consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
                     consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
                     return new ConversionNumero(new Variable(nombre));
+                } else if (nombreMetodo.equals("entero")) {      // ← NUEVO
+                    consumir(TipoToken.PARENTESIS_IZQ, "Se esperaba '('");
+                    consumir(TipoToken.PARENTESIS_DER, "Se esperaba ')'");
+                    return new ConversionEntero(new Variable(nombre));  // ← NUEVO
                 } else if (verificar(TipoToken.PARENTESIS_IZQ)) {
                     List<Expresion> args = new ArrayList<>();
                     avanzar();

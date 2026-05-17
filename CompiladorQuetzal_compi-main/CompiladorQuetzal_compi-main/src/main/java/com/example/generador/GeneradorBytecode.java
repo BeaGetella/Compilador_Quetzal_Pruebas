@@ -649,6 +649,9 @@ public class GeneradorBytecode {
         } else if (expresion instanceof ConversionNumero) {
             generarConversionNumero((ConversionNumero) expresion);
 
+        } else if (expresion instanceof ConversionEntero) {
+            generarConversionEntero((ConversionEntero) expresion);
+
         } else if (expresion instanceof ConversionTexto) {
             Expresion interna = ((ConversionTexto) expresion).getExpresion();
             generarExpresion(interna);
@@ -1233,6 +1236,22 @@ public class GeneradorBytecode {
         methodVisitor.visitInsn(D2I);
     }
 
+
+    private void generarConversionEntero(ConversionEntero conv) {
+        generarExpresion(conv.getExpresion());
+        TipoDato tipo = inferirTipoCompleto(conv.getExpresion());
+        if (tipo == TipoDato.TEXTO) {
+            // String → int via Integer.parseInt()
+            methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Integer",
+                    "parseInt", "(Ljava/lang/String;)I", false);
+        } else if (tipo == TipoDato.NUMERO) {
+            // double → int
+            methodVisitor.visitInsn(D2I);
+        }
+        // Si ya es ENTERO, no hace nada
+    }
+
+
     public void generarConImpresion(Programa programa, String archivoSalida) throws IOException {
 
         classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
@@ -1656,8 +1675,9 @@ public class GeneradorBytecode {
 
 
     private void generarLlamadaFuncionUsuario(LlamadaFuncion llamada) {
-        // Verificar si es método de lista
-        if (esMetodoLista(llamada.getMetodo())) {
+        // Solo redirigir a métodoLista si HAY un objeto real (no vacío)
+        if (llamada.getObjeto() != null && !llamada.getObjeto().isEmpty()
+                && esMetodoLista(llamada.getMetodo())) {
             generarMetodoLista(llamada);
             return;
         }
@@ -1681,7 +1701,6 @@ public class GeneradorBytecode {
             List<Expresion> args = llamada.getArgumentos();
             int slotRangoLista = contadorSlots++;
             int slotRangoIdx = contadorSlots++;
-            int inicio, fin2;
 
             methodVisitor.visitTypeInsn(NEW, "java/util/ArrayList");
             methodVisitor.visitInsn(DUP);
@@ -1712,7 +1731,6 @@ public class GeneradorBytecode {
             methodVisitor.visitVarInsn(ALOAD, slotRangoLista);
             return;
         }
-
     }
 
     private boolean esMetodoLista(String metodo) {

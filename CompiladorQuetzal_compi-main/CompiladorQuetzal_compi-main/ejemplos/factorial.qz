@@ -1,0 +1,19 @@
+entero factorial(entero n) {
+    si (n < 0) {
+        retornar -1
+    }
+    si (n <= 1) {
+        retornar 1
+    }
+    retornar n * factorial(n - 1)
+}
+
+texto entrada = consola.pedir("Ingrese n (>=0): ")
+entero n = entrada.numero()
+
+si (n < 0) {
+    consola.mostrar("Error: n debe ser >= 0")
+} sino {
+    entero resultado = factorial(n)
+    consola.mostrar(t"Factorial: {resultado.texto()}")
+}

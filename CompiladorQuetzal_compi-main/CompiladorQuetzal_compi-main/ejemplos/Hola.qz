@@ -1,0 +1,5 @@
+consola.mostrar("Hola mundo desde Quetzal!")
+texto nombre = consola.pedir("Ingrese su nombre: ")
+
+consola.mostrar("Bienvenido")
+consola.mostrar(nombre)

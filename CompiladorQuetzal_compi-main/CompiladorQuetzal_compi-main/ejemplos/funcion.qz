@@ -1,0 +1,21 @@
+entero acumular(entero cuantos, entero indice, entero sumaActual) {
+    si (indice > cuantos) {
+        retornar sumaActual
+    }
+    texto entrada = consola.pedir(t"Ingrese numero {indice.texto()}: ")
+    entero x = entrada.numero()
+    retornar acumular(cuantos, indice + 1, sumaActual + x)
+}
+
+texto entradaN = consola.pedir("Cuantos numeros desea promediar?: ")
+entero n = entradaN.numero()
+
+si (n <= 0) {
+    consola.mostrar("Error: n debe ser mayor que 0")
+} sino {
+    entero suma = acumular(n, 1, 0)
+    entero promedio = suma / n
+
+    consola.mostrar(t"Suma: {suma.texto()}")
+    consola.mostrar(t"Promedio (truncado): {promedio.texto()}")
+}
