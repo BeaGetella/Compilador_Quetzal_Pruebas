@@ -1,0 +1,15 @@
+entero a = 10
+entero b = 3
+entero var c = 0
+
+c = a + b * 2
+//c = (a + b) * 2
+
+
+consola.mostrar("Valor de c: " + c.texto())
+
+si (c > 15) {
+    consola.mostrar("Mayor que 15")
+} sino {
+    consola.mostrar("Menor o igual a 15")
+}

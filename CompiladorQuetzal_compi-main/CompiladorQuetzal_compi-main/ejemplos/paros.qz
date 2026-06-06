@@ -1,0 +1,53 @@
+jsn arbolAST = {
+    type: "Program",
+    name: "Demo",
+    body: [
+        { type: "VarDecl", name: "x", value: { type: "Number", value: 5 } },
+        {
+            type: "Print",
+            expr: {
+                type: "Binary",
+                op: "+",
+                left: { type: "String", value: "x = " },
+                right: { type: "Identifier", name: "x" }
+            }
+        },
+        {
+            type: "If",
+            test: {
+                type: "Binary",
+                op: ">",
+                left: { type: "Identifier", name: "x" },
+                right: { type: "Number", value: 3 }
+            },
+            then: [
+                { type: "Print", expr: { type: "String", value: "x es mayor que 3" } }
+            ],
+            else: [
+                { type: "Print", expr: { type: "String", value: "x no es mayor que 3" } }
+            ]
+        },
+        {
+            type: "While",
+            test: {
+                type: "Binary",
+                op: ">",
+                left: { type: "Identifier", name: "x" },
+                right: { type: "Number", value: 0 }
+            },
+            body: [
+                { type: "Print", expr: { type: "Identifier", name: "x" } },
+                {
+                    type: "Assign",
+                    name: "x",
+                    value: {
+                        type: "Binary",
+                        op: "-",
+                        left: { type: "Identifier", name: "x" },
+                        right: { type: "Number", value: 1 }
+                    }
+                }
+            ]
+        }
+    ]
+}

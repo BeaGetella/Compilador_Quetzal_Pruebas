@@ -1,6 +1,1 @@
-entero a = 10
-entero b = 5
-entero suma = a + b
-entero resta = a - b
-entero multi = a * b
-entero divi = a / b
+entero a = (4+5)*2
